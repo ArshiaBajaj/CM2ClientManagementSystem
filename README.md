@@ -34,6 +34,12 @@ Optional environment variables:
 | `DEMO_LOGINS` | Set to `on` to pre-fill the manager login and list demo accounts on /login. Leave unset on the live site. |
 | `SITE_ASSET_ORIGIN` | Where website images load from until `npm run site:assets` has copied them |
 
+## Deploying
+
+Vercel's build runs `prisma db push` first, so new tables and columns reach the database without
+running anything by hand. It refuses changes that would delete data, so a risky schema change stops
+the build instead of losing anything.
+
 ## Demo accounts
 
 Password for all demos: `demo1234`
