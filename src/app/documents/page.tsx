@@ -105,8 +105,11 @@ async function ManagerDocuments({
   notice?: string;
 }) {
   const [templates, clients] = await Promise.all([
-    prisma.documentTemplate.findMany({ orderBy: { createdAt: "asc" }, include: { signatures: true } }),
-    prisma.client.count({ where: { archivedAt: null } }),
+    prisma.documentTemplate.findMany({
+      orderBy: { createdAt: "asc" },
+      include: { signatures: { where: { client: { program: "cm2" } } } },
+    }),
+    prisma.client.count({ where: { archivedAt: null, program: "cm2" } }),
   ]);
 
   return (

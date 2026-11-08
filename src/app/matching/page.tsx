@@ -25,12 +25,12 @@ export default async function MatchingPage({
   const [coaches, clients, pairings, requests] = await Promise.all([
     prisma.coachRoster.findMany({ where: { status: "active" }, orderBy: { name: "asc" } }),
     prisma.client.findMany({
-      where: { archivedAt: null },
+      where: { archivedAt: null, program: "cm2" },
       include: { household: true, assignments: { where: { status: "active" }, include: { coach: true } } },
       orderBy: { lastName: "asc" },
     }),
     prisma.assignment.findMany({
-      where: { status: "active" },
+      where: { status: "active", client: { program: "cm2" } },
       include: { coach: true, client: true, sessionAllowance: true },
       orderBy: { createdAt: "desc" },
     }),

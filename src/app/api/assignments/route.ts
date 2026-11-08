@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
     const assignmentId = String(form.get("assignmentId") ?? "").trim();
     if (!assignmentId) return matchingError(request, "Missing pairing");
 
-    const existing = await prisma.assignment.findUnique({ where: { id: assignmentId } });
-    if (!existing || existing.status !== "active") {
+    const existing = await prisma.assignment.findUnique({ where: { id: assignmentId }, include: { client: true } });
+    if (!existing || existing.status !== "active" || existing.client.program !== "cm2") {
       return matchingError(request, "Active pairing not found");
     }
 
@@ -61,9 +61,9 @@ export async function POST(request: NextRequest) {
 
     const assignment = await prisma.assignment.findUnique({
       where: { id: assignmentId },
-      include: { sessionAllowance: true },
+      include: { sessionAllowance: true, client: true },
     });
-    if (!assignment || assignment.status !== "active" || !assignment.sessionAllowance) {
+    if (!assignment || assignment.status !== "active" || !assignment.sessionAllowance || assignment.client.program !== "cm2") {
       return matchingError(request, "Active pairing with allowance required");
     }
 
@@ -109,7 +109,8 @@ export async function POST(request: NextRequest) {
   }
 
   const client = await prisma.client.findUnique({ where: { id: clientId } });
-  if (!client) {
+  // A coach's own private clients are not part of program matching.
+  if (!client || client.program !== "cm2") {
     return matchingError(request, "Client not found");
   }
 

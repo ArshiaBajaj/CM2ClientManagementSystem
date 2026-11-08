@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     where: key === "all" ? { audience: { not: "scribe" } } : { key },
   });
   const submissions = await prisma.formSubmission.findMany({
-    where: { templateId: { in: templates.map((t) => t.id) } },
+    where: { templateId: { in: templates.map((t) => t.id) }, client: { program: "cm2" } },
     include: { client: { select: { publicId: true, group: true } }, template: true },
     orderBy: [{ clientId: "asc" }, { createdAt: "asc" }],
   });

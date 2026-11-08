@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin, isStaff, resolveCoachId } from "@/lib/access";
 import { guardClientWorkspace } from "@/lib/gate";
 import { prisma } from "@/lib/db";
+import { clientScope } from "@/lib/caseload";
 import { Shell } from "@/components/shell";
 import { parseFields, toTenPoint } from "@/lib/forms";
 
@@ -35,7 +36,7 @@ export default async function MetricsPage({ searchParams }: { searchParams: Prom
     user.role === "client"
       ? await prisma.client.findMany({ where: { id: user.clientId ?? "" } })
       : await prisma.client.findMany({
-          where: { ...(coachId ? { assignments: { some: { coachId, status: "active" } } } : {}) },
+          where: await clientScope(user, coachId),
           orderBy: { lastName: "asc" },
         });
   const clients = clientId && isStaff(user) ? scoped.filter((c) => c.id === clientId) : scoped;

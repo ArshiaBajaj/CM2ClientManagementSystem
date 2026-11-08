@@ -117,7 +117,9 @@ export async function POST(request: NextRequest) {
       continue;
     }
 
-    if (settings.creditsEnabled) {
+    // Program credits only apply to Coach Me 2 clients, not a coach's own private clients.
+    const usesCredits = settings.creditsEnabled && access.client.program === "cm2";
+    if (usesCredits) {
       const wallet = await ensureWallet(access.client.householdId);
       if (wallet.balance < 1) {
         if (week === 0) return fail("No session credits left. Add credits before booking.");
@@ -151,7 +153,7 @@ export async function POST(request: NextRequest) {
       include: { client: true, coach: true },
     });
 
-    try {
+    if (usesCredits) try {
       const credit = await consumeCreditIfRequired({
         householdId: access.client.householdId,
         actorId: user.id,

@@ -5,6 +5,7 @@ import { isLeadOrAdmin, isStaff, resolveCoachId } from "@/lib/access";
 import { guardClientWorkspace } from "@/lib/gate";
 import { prisma } from "@/lib/db";
 import { Shell } from "@/components/shell";
+import { CASELOAD_LABELS, clientScope, getCaseload } from "@/lib/caseload";
 
 export default async function ClientsPage({
   searchParams,
@@ -20,12 +21,11 @@ export default async function ClientsPage({
 
   const coachId = user.role === "coach" ? await resolveCoachId(user) : null;
 
+  const caseload = await getCaseload(user);
   const clients = await prisma.client.findMany({
     where: {
       archivedAt: showArchived ? { not: null } : null,
-      ...(user.role === "coach" && coachId
-        ? { assignments: { some: { coachId, status: "active" } } }
-        : {}),
+      ...(await clientScope(user, coachId)),
     },
     include: {
       household: { include: { guardians: true, creditWallet: true } },
@@ -46,8 +46,8 @@ export default async function ClientsPage({
           <h1 className="font-display text-4xl">Clients</h1>
           <p className="mt-3 text-ink/70">
             {user.role === "coach"
-              ? "Your assigned caseload."
-              : "Program clients with unique IDs for forms and sheets."}
+              ? `Showing: ${CASELOAD_LABELS[caseload]}. Switch caseloads in the sidebar.`
+              : "Coach Me 2 program clients with unique IDs for forms and sheets. Coaches' own private clients never appear here."}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -57,6 +57,11 @@ export default async function ClientsPage({
           >
             {showArchived ? "Active clients" : "Archived"}
           </Link>
+          {user.role === "coach" ? (
+            <Link href="/clients/private/new" className="rounded-full bg-moss px-4 py-2 text-sm text-paper">
+              Add my own client
+            </Link>
+          ) : null}
           {isLeadOrAdmin(user) ? (
             <>
               <Link
@@ -103,6 +108,11 @@ export default async function ClientsPage({
                     <Link href={`/clients/${client.id}`} className="text-moss underline">
                       {client.firstName} {client.lastName}
                     </Link>
+                    {client.program === "private" ? (
+                      <span className="ml-2 rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-semibold text-accent-deep">
+                        My client
+                      </span>
+                    ) : null}
                     <p className="text-xs text-ink/50">
                       {client.goals.length} active goal{client.goals.length === 1 ? "" : "s"}
                     </p>

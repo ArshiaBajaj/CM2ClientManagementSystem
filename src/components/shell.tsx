@@ -7,6 +7,7 @@ import type { SessionUser } from "@/lib/auth";
 import { isLeadOrAdmin, isStaff } from "@/lib/access";
 import { coachGate, internRecord, internClearance, lockDestination } from "@/lib/gate";
 import { getProgramSettings } from "@/lib/settings";
+import { CASELOAD_LABELS, getCaseload, type Caseload } from "@/lib/caseload";
 
 type NavItem = { href: string; label: string };
 
@@ -27,6 +28,7 @@ const MANAGER_LINKS: NavItem[] = [
   { href: "/credits", label: "Credits" },
   { href: "/documents", label: "Documents" },
   { href: "/interns", label: "Interns" },
+  { href: "/inbox", label: "Website inbox" },
   { href: "/updates", label: "Website updates" },
   { href: "/settings", label: "Settings" },
 ];
@@ -60,6 +62,30 @@ const INTERN_LINKS: NavItem[] = [
   { href: "/intern/chat", label: "Team chat" },
   { href: "/intern/documents", label: "Documents" },
 ];
+
+/** Coaches flip between Coach Me 2 clients and their own private clients. */
+function CaseloadSwitch({ current, path }: { current: Caseload; path: string }) {
+  const options: Caseload[] = ["cm2", "private", "all"];
+  return (
+    <div className="flex shrink-0 gap-1 rounded-lg bg-white/[0.06] p-1 lg:mx-1 lg:mb-2 lg:flex-col">
+      <p className="hidden px-2 pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-paper/40 lg:block">
+        Caseload
+      </p>
+      {options.map((option) => (
+        <a
+          key={option}
+          href={`/caseload?set=${option}&next=${encodeURIComponent(path || "/workspace")}`}
+          aria-current={option === current ? "true" : undefined}
+          className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium ${
+            option === current ? "bg-white text-[#1a3350]" : "text-paper/70 hover:bg-white/10 hover:text-white"
+          }`}
+        >
+          {CASELOAD_LABELS[option]}
+        </a>
+      ))}
+    </div>
+  );
+}
 
 function Group({ title, items }: { title?: string; items: NavItem[] }) {
   return (
@@ -113,6 +139,7 @@ export async function Shell({
   }
 
   const coachState = user?.role === "coach" ? await coachGate(user) : null;
+  const caseload = coachState === "ready" ? await getCaseload(user) : null;
   const intern = user?.role === "intern" ? await internRecord(user) : null;
   const internReady = intern ? (await internClearance(intern.id)).ready : false;
   const product =
@@ -135,11 +162,13 @@ export async function Shell({
             : "/";
 
   const settings = await getProgramSettings();
+  // The public site now lives in this app, so these open its pages.
   const programLinks = [
-    { href: settings.websiteUrl, label: "CoachMe2.world" },
-    { href: settings.podcastUrl, label: "Podcast" },
-    { href: settings.researchUrl, label: "Research" },
-  ].filter((link) => link.href);
+    { href: "/", label: "CoachMe2.world" },
+    { href: "/hub", label: "The hub" },
+    { href: settings.podcastUrl || "/podcast", label: "Podcast" },
+    { href: settings.researchUrl || "/research", label: "Research" },
+  ];
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[232px_1fr]">
@@ -151,6 +180,7 @@ export async function Shell({
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-4 text-sm lg:flex-1 lg:flex-col lg:overflow-y-auto">
           {!user ? <Group items={[{ href: "/login", label: "Sign in" }]} /> : null}
+          {caseload ? <CaseloadSwitch current={caseload} path={path} /> : null}
           {user && isStaff(user) && coachState === "ready" ? <Group items={STAFF_LINKS} /> : null}
           {user && isStaff(user) && coachState === null ? <Group items={STAFF_LINKS} /> : null}
           {coachState === "forms" ? <Group items={[{ href: "/onboarding", label: "Your forms" }]} /> : null}
@@ -180,11 +210,10 @@ export async function Shell({
                 <a
                   key={link.label}
                   href={link.href}
-                  target="_blank"
-                  rel="noreferrer"
+                  {...(link.href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}
                   className="whitespace-nowrap rounded-lg px-3 py-2 text-paper/70 hover:bg-white/10 hover:text-white"
                 >
-                  {link.label} ↗
+                  {link.label} {link.href.startsWith("http") ? "↗" : ""}
                 </a>
               ))}
             </div>

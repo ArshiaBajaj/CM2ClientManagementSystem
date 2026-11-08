@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin, journalVisibleTo, resolveCoachId } from "@/lib/access";
 import { guardClientWorkspace } from "@/lib/gate";
 import { prisma } from "@/lib/db";
+import { clientScope } from "@/lib/caseload";
 import { Shell } from "@/components/shell";
 
 export default async function JournalPage({
@@ -26,13 +27,13 @@ export default async function JournalPage({
         ? await prisma.client.findMany({
             where: {
               archivedAt: null,
-              assignments: { some: { coachId, status: "active" } },
+              ...(await clientScope(user, coachId)),
             },
             orderBy: { lastName: "asc" },
           })
         : isLeadOrAdmin(user)
           ? await prisma.client.findMany({
-              where: { archivedAt: null },
+              where: { archivedAt: null, program: "cm2" },
               orderBy: { lastName: "asc" },
             })
           : [];

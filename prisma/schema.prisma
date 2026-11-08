@@ -84,6 +84,10 @@ model Client {
   interests              String              @default("")
   preferredTimes         String              @default("")
   aiScribeOptOut         Boolean             @default(false)
+  /// "cm2" = a Coach Me 2 program client managers can see. "private" = a coach's own client, visible only to that coach.
+  program                String              @default("cm2")
+  /// Set for private clients: the coachId of the coach who owns this client.
+  ownerCoachId           String?
   lastActiveAt           DateTime?
   createdAt              DateTime            @default(now())
   tasks                  ClientTask[]
@@ -441,6 +445,21 @@ model CoachRequest {
   status         String   @default("new")
   chosenCoachId  String?
   createdAt      DateTime @default(now())
+}
+
+/// Messages from the public website: contact form, intern applications, partnership notes, quiz sign-ups.
+model SiteInquiry {
+  id        String   @id @default(cuid())
+  kind      String
+  name      String   @default("")
+  email     String
+  topic     String   @default("")
+  message   String   @default("")
+  detailsJson String @default("{}")
+  status    String   @default("new")
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
 }
 
 model ProgramUpdate {

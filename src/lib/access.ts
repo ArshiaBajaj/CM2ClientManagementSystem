@@ -39,6 +39,17 @@ export async function canAccessClient(user: SessionUser, clientId: string) {
   });
   if (!client) return { ok: false as const, client: null };
 
+  // A coach's private clients are theirs alone: managers and other coaches never see them.
+  // The client themself and their family keep their normal access below.
+  if (client.program === "private" && (isLeadOrAdmin(user) || user.role === "coach")) {
+    if (user.role !== "coach") return { ok: false as const, client: null };
+    if ((await coachGate(user)) !== "ready") return { ok: false as const, client: null };
+    const coachId = await resolveCoachId(user);
+    return coachId && client.ownerCoachId === coachId
+      ? { ok: true as const, client }
+      : { ok: false as const, client: null };
+  }
+
   if (isLeadOrAdmin(user)) return { ok: true as const, client };
 
   if (user.role === "coach") {

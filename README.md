@@ -1,7 +1,8 @@
-# Coach Me 2 Client Management
+# Coach Me 2: CoachMe2.world + client management
 
-The Coach Me 2 back office: coaches, managers, students, and parents. The public website links
-into it (Get a coach, Sign in, Become a coach). Coaches are accepted only after a signed status
+One app for the public CoachMe2.world website and the Coach Me 2 back office (coaches, managers,
+students, parents, interns). The website pages live in `src/app/(site)` and read their text,
+people, and links from `src/content/site.ts`. Coaches are accepted only after a signed status
 event from the onboarding app.
 
 - Local URL: http://localhost:3000
@@ -15,6 +16,10 @@ npm run db:seed      # demo users + CM2 program content
 npm run dev
 ```
 
+`npm run site:assets` copies the website's photos and illustrations from the old
+coachme2-world.vercel.app site into `public/site` (run it once on a computer with internet access,
+then commit the files). Until then, pages load those images from the old site.
+
 `npm run db:content` adds the CM2 program content (appointment types, forms, automatic form
 rules, documents) to an existing database without touching anything already there.
 
@@ -26,6 +31,8 @@ Optional environment variables:
 | `ANTHROPIC_MODEL` | Claude model (default `claude-sonnet-4-5`) |
 | `ONBOARDING_APP_URL` | "Become a coach" link on the public home page |
 | `COACH_STATUS_SECRET` | Shared secret for signed coach status events from onboarding |
+| `DEMO_LOGINS` | Set to `on` to pre-fill the manager login and list demo accounts on /login. Leave unset on the live site. |
+| `SITE_ASSET_ORIGIN` | Where website images load from until `npm run site:assets` has copied them |
 
 ## Demo accounts
 
@@ -62,11 +69,23 @@ Password for all demos: `demo1234`
   team, chat with their team, all interns, and between teams, plus shared documents. Parents sign
   and can see that status. They do not see team chat. Coaching notes are not in the intern workspace.
 
+## Private clients (coach caseloads)
+
+Coaches can add their own clients from Clients → Add my own client. Those clients are private to
+that coach: managers, other coaches, matching, credits, metrics exports, and program counts never
+include them, and the team calendar shows only "Busy · outside CM2". A switcher in the coach's
+sidebar flips between Coach Me 2 clients, their own clients, or everyone. Private clients get
+`PVT-` IDs; program clients keep `CM2-` IDs.
+
 ## Feature map
 
 | Area | Route |
 | --- | --- |
-| Public hub, Get a coach form | `/`, `/get-a-coach` |
+| Public website (home, about, teens, parents, partners, programs, coaches, board, interns, resources, podcast, research, donate, contact, get involved) | `/`, `/about`, `/teens`, … (see `src/app/(site)`) |
+| Get a coach (discovery call, request form, sign in) | `/scheduling`, `/get-a-coach` |
+| Coach Me 2 hub: everything in one place | `/hub` |
+| Website inbox: contact form, intern applications, quiz sign-ups | `/inbox` |
+| Coach's own private clients | `/clients/private/new`, sidebar caseload switcher |
 | Public JSON feed for the website (links, podcast, research) | `/api/public/updates` |
 | Home (role dashboards with to-dos) | `/workspace` |
 | Coach matching (top 3 suggestions) | `/matching` |

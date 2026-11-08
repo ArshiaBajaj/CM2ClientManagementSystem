@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { getGuardianHouseholdId, isLeadOrAdmin, isStaff, resolveCoachId } from "@/lib/access";
 import { guardClientWorkspace } from "@/lib/gate";
 import { prisma } from "@/lib/db";
+import { clientScope, appointmentScope } from "@/lib/caseload";
 import { Notice, Shell } from "@/components/shell";
 import { getProgramSettings } from "@/lib/settings";
 import { ensureWallet } from "@/lib/credits";
@@ -43,13 +44,13 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   if (user.role === "coach" && coachId) {
     bookableClients = await prisma.client.findMany({
-      where: { archivedAt: null, assignments: { some: { coachId, status: "active" } } },
+      where: { archivedAt: null, ...(await clientScope(user, coachId)) },
       select: { id: true, firstName: true, lastName: true, publicId: true },
       orderBy: { lastName: "asc" },
     });
   } else if (manager) {
     bookableClients = await prisma.client.findMany({
-      where: { archivedAt: null },
+      where: { archivedAt: null, program: "cm2" },
       select: { id: true, firstName: true, lastName: true, publicId: true },
       orderBy: { lastName: "asc" },
     });
@@ -83,7 +84,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       : await prisma.appointment.findMany({
           where: {
             ...statusWhere,
-            ...(coachId ? { coachId } : {}),
+            ...(isStaff(user) ? await appointmentScope(user, coachId) : {}),
             ...(scopeClientIds ? { clientId: { in: scopeClientIds } } : {}),
           },
           include: { client: true, coach: true, appointmentType: true },
@@ -420,18 +421,25 @@ async function TeamWeek({ weekOffset }: { weekOffset: number }) {
                           Free {minutesToLabel(s.startMinute)}–{minutesToLabel(s.endMinute)}
                         </p>
                       ))}
-                      {appts.map((a) => (
-                        <Link
-                          key={a.id}
-                          href={`/calendar/${a.id}`}
-                          className={`block rounded px-1.5 py-1 ${
-                            a.status === "no_show" ? "bg-signal/15 text-signal" : "bg-[#1a3350] text-paper"
-                          }`}
-                        >
-                          Busy {a.startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} ·{" "}
-                          {a.client.firstName}
-                        </Link>
-                      ))}
+                      {appts.map((a) =>
+                        a.client.program === "private" ? (
+                          // A coach's own client: show the time as taken, nothing else.
+                          <p key={a.id} className="rounded bg-ink/10 px-1.5 py-1 text-ink/60">
+                            Busy {a.startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · outside CM2
+                          </p>
+                        ) : (
+                          <Link
+                            key={a.id}
+                            href={`/calendar/${a.id}`}
+                            className={`block rounded px-1.5 py-1 ${
+                              a.status === "no_show" ? "bg-signal/15 text-signal" : "bg-[#1a3350] text-paper"
+                            }`}
+                          >
+                            Busy {a.startsAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} ·{" "}
+                            {a.client.firstName}
+                          </Link>
+                        ),
+                      )}
                       {slots.length === 0 && appts.length === 0 ? <p className="px-1.5 text-ink/25">—</p> : null}
                     </td>
                   );

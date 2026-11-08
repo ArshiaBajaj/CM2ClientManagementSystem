@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin, isStaff, resolveCoachId } from "@/lib/access";
 import { prisma } from "@/lib/db";
+import { clientScope } from "@/lib/caseload";
 import { Shell } from "@/components/shell";
 
 export default async function GoalsPage({
@@ -27,11 +28,11 @@ export default async function GoalsPage({
         ? await prisma.client.findMany({
             where: {
               archivedAt: null,
-              assignments: { some: { coachId, status: "active" } },
+              ...(await clientScope(user, coachId)),
             },
           })
         : isLeadOrAdmin(user)
-          ? await prisma.client.findMany({ where: { archivedAt: null } })
+          ? await prisma.client.findMany({ where: { archivedAt: null, program: "cm2" } })
           : [];
 
   const goals = await prisma.goal.findMany({

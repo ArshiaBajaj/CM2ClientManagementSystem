@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin, isStaff, resolveCoachId } from "@/lib/access";
 import { guardClientWorkspace } from "@/lib/gate";
 import { prisma } from "@/lib/db";
+import { clientScope } from "@/lib/caseload";
 import { Notice, Shell } from "@/components/shell";
 import { AnswerList, FormFields } from "@/components/form-fields";
 import { FORM_STAGES, parseFields } from "@/lib/forms";
@@ -109,7 +110,7 @@ async function StaffForms({
   const manager = isLeadOrAdmin(user);
   const coachId = manager ? null : await resolveCoachId(user);
   const clients = await prisma.client.findMany({
-    where: { archivedAt: null, ...(coachId ? { assignments: { some: { coachId, status: "active" } } } : {}) },
+    where: { archivedAt: null, ...(await clientScope(user, coachId)) },
     orderBy: { lastName: "asc" },
   });
   const selected = clients.find((c) => c.id === clientId);

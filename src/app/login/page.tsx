@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { Shell } from "@/components/shell";
+import { homeFor } from "@/lib/gate";
+import { SiteShell } from "@/components/site/site-shell";
 
 export default async function LoginPage({
   searchParams,
@@ -8,15 +9,18 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const user = await getSession();
-  if (user) redirect("/workspace");
+  if (user) redirect(await homeFor(user));
   const { error } = await searchParams;
+  // Demo hints (pre-filled manager login, list of preview accounts) only show when DEMO_LOGINS=on.
+  // Keep it off once real families use the site.
+  const demo = process.env.DEMO_LOGINS === "on";
 
   return (
-    <Shell user={null}>
-      <div className="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+    <SiteShell>
+      <div className="mx-auto grid max-w-5xl gap-10 px-6 py-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div className="stagger">
           <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-            Workspace sign in
+            Sign in to Coach Me 2
           </h1>
           <p className="mt-4 max-w-md text-ink/65">
             Sign in with the email for your role. The next screen tells you if a form still needs a signature.
@@ -41,7 +45,8 @@ export default async function LoginPage({
                 type="email"
                 required
                 className="field bg-white"
-                defaultValue="lead@coachme2.org"
+                autoComplete="email"
+                defaultValue={demo ? "lead@coachme2.org" : undefined}
               />
             </label>
             <label className="block text-sm font-medium">
@@ -51,12 +56,16 @@ export default async function LoginPage({
                 type="password"
                 required
                 className="field bg-white"
-                defaultValue="demo1234"
+                autoComplete="current-password"
+                defaultValue={demo ? "demo1234" : undefined}
               />
             </label>
-            <p className="text-sm text-ink/55">The manager preview is filled in. Password for every preview account is demo1234.</p>
+            {demo ? (
+              <p className="text-sm text-ink/55">The manager preview is filled in. Password for every preview account is demo1234.</p>
+            ) : null}
             <button className="btn w-full py-3">Continue</button>
           </form>
+          {demo ? (
           <div className="mt-6 border-t border-ink/10 pt-4 text-sm">
             <p className="font-medium">Other preview accounts</p>
             <ul className="mt-2 space-y-1.5 text-ink/70">
@@ -68,8 +77,17 @@ export default async function LoginPage({
               <li>Student · teen@example.com · Family · guardian@example.com</li>
             </ul>
           </div>
+          ) : (
+            <p className="mt-6 border-t border-ink/10 pt-4 text-sm text-ink/60">
+              New here?{" "}
+              <a href="/scheduling" className="link-accent">
+                Get a coach
+              </a>{" "}
+              first. Your program lead sets up your account.
+            </p>
+          )}
         </div>
       </div>
-    </Shell>
+    </SiteShell>
   );
 }

@@ -19,8 +19,14 @@ export default async function CreditsPage({
   let householdId =
     user.role === "guardian" ? await getGuardianHouseholdId(user) : qsHousehold ?? null;
 
+  // Coaches' private clients keep their own households; managers only see Coach Me 2 families.
+  const cm2Household = { clients: { some: { program: "cm2" } } };
+  if (isLeadOrAdmin(user) && householdId) {
+    const visible = await prisma.household.findFirst({ where: { id: householdId, ...cm2Household } });
+    if (!visible) householdId = null;
+  }
   if (isLeadOrAdmin(user) && !householdId) {
-    const first = await prisma.household.findFirst({ orderBy: { createdAt: "asc" } });
+    const first = await prisma.household.findFirst({ where: cm2Household, orderBy: { createdAt: "asc" } });
     householdId = first?.id ?? null;
   }
 
@@ -40,7 +46,7 @@ export default async function CreditsPage({
   });
 
   const households = isLeadOrAdmin(user)
-    ? await prisma.household.findMany({ orderBy: { name: "asc" } })
+    ? await prisma.household.findMany({ where: cm2Household, orderBy: { name: "asc" } })
     : [];
 
   return (

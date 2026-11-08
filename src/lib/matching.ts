@@ -49,7 +49,8 @@ export async function suggestCoaches(input: {
     where: { status: "active", coachId: { notIn: input.excludeCoachIds ?? [] } },
     include: {
       availability: true,
-      assignments: { where: { status: "active" } },
+      // Only program clients count here; a coach's own private caseload stays private.
+      assignments: { where: { status: "active", client: { program: "cm2" } } },
     },
   });
 

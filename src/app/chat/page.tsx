@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { isLeadOrAdmin, resolveCoachId } from "@/lib/access";
+import { isLeadOrAdmin, isStaff, resolveCoachId } from "@/lib/access";
 import { guardClientWorkspace } from "@/lib/gate";
 import { prisma } from "@/lib/db";
+import { clientScope, conversationScope } from "@/lib/caseload";
 import { Shell } from "@/components/shell";
 
 export default async function ChatPage({
@@ -23,7 +24,7 @@ export default async function ChatPage({
   const conversations = await prisma.conversation.findMany({
     where: {
       status: filter === "all" ? undefined : filter,
-      ...(user.role === "coach" && coachId ? { coachId } : {}),
+      ...(isStaff(user) ? await conversationScope(user, coachId) : {}),
       ...(user.role === "client" && user.clientId ? { clientId: user.clientId } : {}),
       ...(q
         ? {
@@ -52,13 +53,13 @@ export default async function ChatPage({
       ? await prisma.client.findMany({
           where: {
             archivedAt: null,
-            assignments: { some: { coachId, status: "active" } },
+            ...(await clientScope(user, coachId)),
           },
           orderBy: { lastName: "asc" },
         })
       : isLeadOrAdmin(user)
         ? await prisma.client.findMany({
-            where: { archivedAt: null },
+            where: { archivedAt: null, program: "cm2" },
             orderBy: { lastName: "asc" },
           })
         : [];

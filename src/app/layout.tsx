@@ -14,9 +14,11 @@ const sans = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "CoachMe2.world | Client workspace",
-  description:
-    "Client, guardian, and coach workspace for CoachMe2.world — goals, sessions, consent, and program care.",
+  title: {
+    default: "CoachMe2.world | Everyone deserves a coach",
+    template: "%s | CoachMe2.world",
+  },
+  description: "Affordable, nonjudgmental coaching for teens 14–19. Get from where you are to where you want to be.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
