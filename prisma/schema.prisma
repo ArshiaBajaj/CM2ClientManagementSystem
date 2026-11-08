@@ -19,6 +19,8 @@ model User {
   internId  String?  @unique
   intern    Intern?  @relation(fields: [internId], references: [id])
   mustChangePassword Boolean @default(false)
+  /// Secret for this person's private calendar feed (sessions on iPhone, Apple Watch, Google Calendar).
+  calendarToken String? @unique
   lastLoginAt DateTime?
   createdAt DateTime @default(now())
 }
@@ -462,6 +464,18 @@ model SiteInquiry {
   @@index([status, createdAt])
 }
 
+/// A phone or browser that asked for Coach Me 2 notifications (these also show on a paired Apple Watch).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
 model ProgramUpdate {
   id          String   @id @default(cuid())
   kind        String
@@ -511,6 +525,9 @@ model ProgramSettings {
   googleCalendarLinked    Boolean @default(false)
   outlookCalendarLinked   Boolean @default(false)
   rolePermissionsJson     String  @default("{}")
+  /// Keys for phone and Apple Watch notifications. Created automatically the first time they're needed.
+  vapidPublicKey          String  @default("")
+  vapidPrivateKey         String  @default("")
 }
 
 model EmailLog {
@@ -591,6 +608,8 @@ model InternChannel {
   kind      String
   teamId    String?
   team      InternTeam?    @relation(fields: [teamId], references: [id])
+  /// For kind "direct": the two intern ids in the conversation, comma-separated.
+  memberIds String         @default("")
   createdAt DateTime       @default(now())
   messages  InternMessage[]
 }

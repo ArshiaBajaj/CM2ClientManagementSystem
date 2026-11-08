@@ -157,6 +157,16 @@ export const QUIZ_STEPS = [
   },
 ];
 
+/** What the portal does, shown on the home page. */
+export const APP_FEATURES = [
+  { icon: "💬", title: "Chat with your coach", body: "Private, between you and your coach. Parents get logistics, not your conversations." },
+  { icon: "🎯", title: "Daily goal check-ins", body: "Set goals with your coach and check in each day. Streaks keep you honest." },
+  { icon: "⌚", title: "Apple Watch reminders", body: "Session and goal reminders tap your wrist. No app store needed." },
+  { icon: "📅", title: "Sessions in your calendar", body: "One tap adds every session to your phone's calendar, and updates itself." },
+  { icon: "🧭", title: "Values & world view", body: "Find what matters most to you and see how it shapes your choices." },
+  { icon: "🏆", title: "Achievement portfolio", body: "Collect what you've built and proud moments for college and job apps." },
+];
+
 export const COACHING_IS_NOT = [
   { title: "Not consulting", body: "Consultants tell you what to do. You remain the expert." },
   { title: "Not teaching", body: "Teachers decide what you should know. We follow what matters to you." },

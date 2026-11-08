@@ -69,6 +69,35 @@ a {
     @apply font-medium text-accent underline decoration-accent/30 underline-offset-4 transition hover:decoration-accent;
   }
 
+  /* Public site */
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-accent/20 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent-deep backdrop-blur;
+  }
+
+  .eyebrow::before {
+    content: "";
+    @apply h-1.5 w-1.5 rounded-full bg-leaf;
+  }
+
+  .hero-glow {
+    background:
+      radial-gradient(700px 380px at 85% 10%, rgba(74, 150, 37, 0.12), transparent 60%),
+      radial-gradient(900px 500px at 10% 0%, rgba(59, 127, 196, 0.18), transparent 60%);
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(100deg, #245f9a 10%, #3b7fc4 55%, #4a9625 100%);
+  }
+
+  .band {
+    @apply border-y border-ink/[0.06] bg-white/60;
+  }
+
+  .lift {
+    @apply transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_60px_-30px_rgba(10,15,26,0.45)];
+  }
+
   .page-enter {
     animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   }

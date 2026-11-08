@@ -9,6 +9,7 @@ import {
   resolveCoachId,
 } from "@/lib/access";
 import { prisma } from "@/lib/db";
+import { notifyUsers } from "@/lib/push";
 import { consumeCreditIfRequired, ensureWallet, refundCreditIfEligible } from "@/lib/credits";
 import { sendAppointmentConfirmation } from "@/lib/email";
 import { getPermissions, getProgramSettings } from "@/lib/settings";
@@ -168,6 +169,30 @@ export async function POST(request: NextRequest) {
       if (week === 0) return fail("No session credits left. Add credits before booking.");
       skipped.push(`${label} (no credits left)`);
       break;
+    }
+
+    if (week === 0) {
+      // Let the student (and the coach, if someone else booked) know on their phone and Apple Watch.
+      const when = startsAt.toLocaleString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: access.client.timezone || "America/New_York",
+      });
+      const [students, coachUsers] = await Promise.all([
+        prisma.user.findMany({ where: { clientId: access.client.id, role: "client" }, select: { id: true } }),
+        prisma.user.findMany({ where: { OR: [{ coachId }, { email: appointment.coach.email }] }, select: { id: true } }),
+      ]);
+      await notifyUsers(
+        students.map((u) => u.id).filter((id) => id !== user.id),
+        { title: "Session booked", body: `${type.name} with ${appointment.coach.name} · ${when}`, url: "/calendar", tag: `appt-${appointment.id}` },
+      );
+      await notifyUsers(
+        coachUsers.map((u) => u.id).filter((id) => id !== user.id),
+        { title: "New booking", body: `${access.client.firstName} · ${when}`, url: `/calendar/${appointment.id}`, tag: `appt-${appointment.id}` },
+      );
     }
 
     if (type.confirmationTiming !== "none") {

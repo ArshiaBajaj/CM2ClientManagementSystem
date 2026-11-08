@@ -13,6 +13,8 @@ const config: Config = {
           deep: "#245f9a",
         },
         mist: "#d7e3f2",
+        leaf: { DEFAULT: "#4a9625", soft: "#e7f3e1" },
+        navy: "#13263d",
         signal: "#c2410c",
         // Keep legacy aliases so any missed class still resolves during migration
         moss: "#3b7fc4",

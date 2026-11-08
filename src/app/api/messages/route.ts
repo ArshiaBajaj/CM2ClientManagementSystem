@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { canAccessClient, isStaff, resolveCoachId } from "@/lib/access";
 import { denyClosed } from "@/lib/gate";
 import { prisma } from "@/lib/db";
+import { notifyUsers } from "@/lib/push";
 
 export async function POST(request: NextRequest) {
   const user = await getSession();
@@ -69,6 +70,12 @@ export async function POST(request: NextRequest) {
   }
 
   const access = await canAccessClient(user, conversation.clientId);
+  // A coach's private clients are off limits to managers, even with a conversation link.
+  const privateClient = access.client?.program === "private" ||
+    (await prisma.client.findUnique({ where: { id: conversation.clientId }, select: { program: true } }))?.program === "private";
+  if (privateClient && user.role !== "coach" && user.role !== "client") {
+    return NextResponse.redirect(new URL("/chat?error=Access%20denied", request.url), 303);
+  }
   if (!access.ok && !(isStaff(user) && user.role !== "coach")) {
     return NextResponse.redirect(new URL("/chat?error=Access%20denied", request.url), 303);
   }
@@ -98,6 +105,25 @@ export async function POST(request: NextRequest) {
     where: { id: conversation.id },
     data: { lastMessageAt: new Date() },
   });
+
+  // Tell the other side (phone + Apple Watch). Only who wrote, never the message itself.
+  if (user.role === "client") {
+    const roster = await prisma.coachRoster.findUnique({ where: { coachId: conversation.coachId } });
+    const coachUsers = await prisma.user.findMany({
+      where: { OR: [{ coachId: conversation.coachId }, ...(roster ? [{ email: roster.email }] : [])] },
+      select: { id: true },
+    });
+    await notifyUsers(
+      coachUsers.map((u) => u.id),
+      { title: "New message", body: `${user.name.split(" ")[0]} sent you a message.`, url: `/chat/${conversation.id}`, tag: `chat-${conversation.id}` },
+    );
+  } else {
+    const students = await prisma.user.findMany({ where: { clientId: conversation.clientId, role: "client" }, select: { id: true } });
+    await notifyUsers(
+      students.map((u) => u.id),
+      { title: "New message from your coach", body: `${user.name.split(" ")[0]} sent you a message.`, url: `/chat/${conversation.id}`, tag: `chat-${conversation.id}` },
+    );
+  }
 
   return NextResponse.redirect(new URL(`/chat/${conversation.id}`, request.url), 303);
 }

@@ -221,6 +221,7 @@ export async function Shell({
 
           {user ? (
             <div className={`flex gap-1 border-white/10 lg:flex-col lg:border-t lg:pt-3 ${programLinks.length ? "lg:mt-3" : "lg:mt-auto"}`}>
+              <NavLink href="/account/devices">Phone &amp; Apple Watch</NavLink>
               <NavLink href="/account/password">Change password</NavLink>
               <form action="/api/auth/logout" method="post">
                 <button className="w-full whitespace-nowrap rounded-lg px-3 py-2 text-left text-paper/70 hover:bg-white/10 hover:text-white">

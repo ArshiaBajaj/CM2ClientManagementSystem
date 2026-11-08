@@ -15,13 +15,20 @@ export function PageHero({
 }) {
   const src = siteAsset(art);
   return (
-    <section className="mx-auto grid max-w-6xl items-center gap-8 px-6 pb-6 pt-14 sm:pt-20 md:grid-cols-[1fr_auto]">
-      <div className="max-w-3xl">
-        <p className="label-caps text-accent">{eyebrow}</p>
-        <h1 className="mt-3 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">{title}</h1>
-        {children ? <div className="mt-5 space-y-4 text-lg leading-relaxed text-ink/70">{children}</div> : null}
+    <section className="hero-glow border-b border-ink/[0.06]">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pb-14 pt-16 sm:pt-24 md:grid-cols-[1fr_auto]">
+        <div className="max-w-3xl">
+          <p className="eyebrow">{eyebrow}</p>
+          <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.04] tracking-tight sm:text-6xl">{title}</h1>
+          {children ? <div className="mt-6 space-y-4 text-lg leading-relaxed text-ink/70">{children}</div> : null}
+        </div>
+        {src ? (
+          <div className="relative mx-auto hidden md:block">
+            <div className="absolute inset-4 rounded-full bg-gradient-to-br from-accent/20 to-leaf/20 blur-2xl" aria-hidden />
+            <img src={src} alt="" className="relative h-56 w-56" />
+          </div>
+        ) : null}
       </div>
-      {src ? <img src={src} alt="" className="mx-auto hidden h-48 w-48 md:block" /> : null}
     </section>
   );
 }
@@ -40,9 +47,9 @@ export function Section({
   className?: string;
 }) {
   return (
-    <section className={`mx-auto max-w-6xl px-6 py-12 ${className}`}>
-      {eyebrow ? <p className="label-caps text-accent">{eyebrow}</p> : null}
-      {title ? <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight">{title}</h2> : null}
+    <section className={`mx-auto max-w-6xl px-6 py-14 ${className}`}>
+      {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
+      {title ? <h2 className="mt-4 max-w-3xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h2> : null}
       {intro ? <p className="mt-3 max-w-2xl text-ink/65">{intro}</p> : null}
       <div className={title || intro ? "mt-8" : ""}>{children}</div>
     </section>
@@ -65,7 +72,7 @@ export function Card({
   external?: boolean;
 }) {
   return (
-    <article className="panel flex flex-col rounded-xl p-6">
+    <article className="panel lift flex flex-col rounded-2xl p-6">
       {tag ? <p className="label-caps text-accent">{tag}</p> : null}
       <h3 className={`font-display text-xl font-semibold tracking-tight ${tag ? "mt-2" : ""}`}>{title}</h3>
       <div className="mt-2 flex-1 text-sm leading-relaxed text-ink/65">{children}</div>
@@ -114,22 +121,29 @@ export function CtaBand({
   secondary?: { href: string; label: string };
 }) {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-12">
-      <div className="overflow-hidden rounded-2xl bg-[#1a3350] px-6 py-10 text-paper sm:px-10">
-        <h2 className="max-w-2xl font-display text-3xl font-semibold tracking-tight">{title}</h2>
-        <p className="mt-3 max-w-xl text-paper/75">{body}</p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <SmartLink href={href} className="btn bg-white text-[#1a3350] hover:bg-paper">
-            {cta}
-          </SmartLink>
-          {secondary ? (
-            <SmartLink
-              href={secondary.href}
-              className="inline-flex items-center justify-center rounded-md border border-white/25 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
-            >
-              {secondary.label}
+    <section className="mx-auto max-w-6xl px-6 py-14">
+      <div className="relative overflow-hidden rounded-3xl bg-navy px-6 py-12 text-paper shadow-soft sm:px-12">
+        <div
+          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/40 blur-3xl"
+          aria-hidden
+        />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-leaf/30 blur-3xl" aria-hidden />
+        <div className="relative">
+          <h2 className="max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h2>
+          <p className="mt-3 max-w-xl text-lg text-paper/75">{body}</p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <SmartLink href={href} className="btn bg-white text-navy hover:bg-paper">
+              {cta}
             </SmartLink>
-          ) : null}
+            {secondary ? (
+              <SmartLink
+                href={secondary.href}
+                className="inline-flex items-center justify-center rounded-md border border-white/25 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+              >
+                {secondary.label}
+              </SmartLink>
+            ) : null}
+          </div>
         </div>
       </div>
     </section>
@@ -158,14 +172,14 @@ export function PeopleGrid({ people }: { people: Person[] }) {
       {people.map((person) => {
         const photo = siteAsset(person.photo);
         return (
-          <li key={`${person.name}-${person.role}`} className="panel flex flex-col rounded-xl p-5">
+          <li key={`${person.name}-${person.role}`} className="panel lift flex flex-col rounded-2xl p-5">
             <div className="flex items-center gap-4">
               {photo ? (
                 <img
                   src={photo}
                   alt={person.name}
                   loading="lazy"
-                  className="h-16 w-16 shrink-0 rounded-full bg-mist object-cover"
+                  className="h-16 w-16 shrink-0 rounded-full bg-mist object-cover ring-4 ring-white shadow-soft"
                 />
               ) : (
                 <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-mist font-display text-lg font-semibold text-accent-deep">

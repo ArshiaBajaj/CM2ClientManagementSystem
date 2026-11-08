@@ -83,6 +83,17 @@ include them, and the team calendar shows only "Busy · outside CM2". A switcher
 sidebar flips between Coach Me 2 clients, their own clients, or everyone. Private clients get
 `PVT-` IDs; program clients keep `CM2-` IDs.
 
+## Phone & Apple Watch
+
+- **Installable app:** on iPhone, Safari → Share → Add to Home Screen opens the portal full-screen with the
+  Coach Me 2 icon (`src/app/manifest.ts`, `public/sw.js`).
+- **Notifications:** people turn them on under Phone & Apple Watch (`/account/devices`). New chat messages,
+  intern messages, bookings, and a daily morning reminder (Vercel Cron, `/api/cron/daily`) are sent with Web Push.
+  iPhone notifications appear on a paired Apple Watch. Notifications never include message text. Keys are created
+  automatically; set `CRON_SECRET` on Vercel to lock the reminder job to Vercel's scheduler.
+- **Calendar feed:** each person gets a private link that puts their sessions in Apple Calendar (and on Apple
+  Watch), Google Calendar, or Outlook with a 15-minute alert.
+
 ## Feature map
 
 | Area | Route |

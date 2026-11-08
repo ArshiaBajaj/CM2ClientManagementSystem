@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { prisma } from "@/lib/db";
+import { notifyUsers } from "@/lib/push";
 import { hashPassword } from "@/lib/password";
 import { nextInternPublicId } from "@/lib/ids";
 import { answersFromForm, ensureProgramChannels, ensureTeamChannel, internClearance, internRecord } from "@/lib/gate";
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
   if (intent === "packet") return editPacket(request, user, form);
   if (intent === "sign") return sign(request, user, form);
   if (intent === "message") return message(request, user, form);
+  if (intent === "direct") return startDirect(request, user, form);
   if (intent === "document") return shareDocument(request, user, form);
   if (intent === "task") return createTask(request, user, form);
   if (intent === "task-status") return moveTask(request, user, form);
@@ -227,7 +229,10 @@ async function message(request: NextRequest, user: NonNullable<Awaited<ReturnTyp
   } else if (user.role === "intern") {
     const intern = await internRecord(user);
     if (!intern || !(await internClearance(intern.id)).ready) return go(request, "/intern/start", "error", "Finish the forms first");
-    const allowed = channel.kind === "all" || channel.kind === "between" || channel.teamId === intern.teamId;
+    const allowed =
+      channel.kind === "all" ||
+      channel.kind === "between" ||
+      (channel.kind === "direct" ? channel.memberIds.split(",").includes(intern.id) : channel.teamId === intern.teamId);
     if (!allowed) return go(request, "/intern/chat", "error", "That channel is for another team");
   } else {
     return go(request, "/workspace", "error", "Intern chat is for interns");
@@ -236,9 +241,55 @@ async function message(request: NextRequest, user: NonNullable<Awaited<ReturnTyp
   await prisma.internMessage.create({
     data: { channelId: channel.id, senderId: user.id, senderName: user.name, body: body.slice(0, 2000) },
   });
+  // Notify the interns who can read this channel (not managers, to keep it quiet for them).
+  const readers = await prisma.intern.findMany({
+    where:
+      channel.kind === "direct"
+        ? { id: { in: channel.memberIds.split(",") } }
+        : channel.kind === "team"
+          ? { teamId: channel.teamId ?? "" }
+          : { status: "active" },
+    select: { user: { select: { id: true } } },
+  });
+  await notifyUsers(
+    readers.map((r) => r.user?.id ?? "").filter((id) => id && id !== user.id),
+    {
+      title: channel.kind === "direct" ? `Message from ${user.name.split(" ")[0]}` : channel.name,
+      body: channel.kind === "direct" ? "Open intern chat to reply." : `${user.name.split(" ")[0]} posted in ${channel.name}.`,
+      url: `/intern/chat?channel=${channel.key}`,
+      tag: `intern-${channel.key}`,
+    },
+  );
   const url = new URL(safeReturn, request.url);
   url.searchParams.set("channel", channel.key);
   url.searchParams.set("notice", "Message sent");
+  return NextResponse.redirect(url, 303);
+}
+
+/** Opens (or creates) a one-on-one conversation between two cleared interns. */
+async function startDirect(request: NextRequest, user: NonNullable<Awaited<ReturnType<typeof getSession>>>, form: FormData) {
+  if (user.role !== "intern") return go(request, "/interns/chat", "error", "Direct messages are between interns");
+  const me = await internRecord(user);
+  if (!me || !(await internClearance(me.id)).ready) return go(request, "/intern/start", "error", "Finish the forms first");
+  const other = await prisma.intern.findUnique({ where: { id: String(form.get("internId") ?? "") } });
+  if (!other || other.id === me.id) return go(request, "/intern/chat", "error", "Pick another intern to message");
+  if (!(await internClearance(other.id)).ready) {
+    return go(request, "/intern/chat", "error", `${other.firstName} can chat once their forms are signed`);
+  }
+  const ids = [me.id, other.id].sort();
+  const key = `dm-${ids.join("-")}`;
+  await prisma.internChannel.upsert({
+    where: { key },
+    update: {},
+    create: {
+      key,
+      kind: "direct",
+      name: [me, other].map((i) => `${i.firstName} ${i.lastName.slice(0, 1)}.`).sort().join(" & "),
+      memberIds: ids.join(","),
+    },
+  });
+  const url = new URL("/intern/chat", request.url);
+  url.searchParams.set("channel", key);
   return NextResponse.redirect(url, 303);
 }
 
