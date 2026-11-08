@@ -1,0 +1,8 @@
+.env*
+prisma/*.db
+prisma/*.db.*
+prisma/*.db-journal
+prisma/export
+.agents
+node_modules
+.next

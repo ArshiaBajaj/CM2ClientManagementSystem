@@ -1,0 +1,635 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String
+  coachId   String?
+  clientId  String?
+  internId  String?  @unique
+  intern    Intern?  @relation(fields: [internId], references: [id])
+  mustChangePassword Boolean @default(false)
+  lastLoginAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+model CoachRoster {
+  id            String        @id @default(cuid())
+  coachId       String        @unique
+  email         String        @unique
+  name          String
+  status        String
+  programRoles  String
+  effectiveAt   DateTime
+  expiresAt     DateTime?
+  sourceEventId String        @unique
+  focusAreas    String        @default("")
+  capacity      Int           @default(8)
+  timezone      String        @default("America/New_York")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  assignments   Assignment[]
+  appointments  Appointment[]
+  availability  CoachAvailability[]
+}
+
+model CoachAvailability {
+  id          String      @id @default(cuid())
+  coachId     String
+  coach       CoachRoster @relation(fields: [coachId], references: [coachId])
+  weekday     Int
+  startMinute Int
+  endMinute   Int
+}
+
+model Household {
+  id            String        @id @default(cuid())
+  name          String
+  createdAt     DateTime      @default(now())
+  clients       Client[]
+  guardians     Guardian[]
+  creditWallet  CreditWallet?
+}
+
+model Client {
+  id                     String              @id @default(cuid())
+  publicId               String              @unique
+  householdId            String
+  household              Household           @relation(fields: [householdId], references: [id])
+  firstName              String
+  lastName               String
+  dateOfBirth            String
+  status                 String
+  email                  String?
+  phone                  String?
+  archivedAt             DateTime?
+  emergencyContactName   String?
+  emergencyContactPhone  String?
+  emergencyContactEmail  String?
+  emergencyContactRelation String?
+  timezone               String              @default("America/New_York")
+  location               String?
+  group                  String?
+  avatarUrl              String?
+  interests              String              @default("")
+  preferredTimes         String              @default("")
+  aiScribeOptOut         Boolean             @default(false)
+  lastActiveAt           DateTime?
+  createdAt              DateTime            @default(now())
+  tasks                  ClientTask[]
+  progressReports        ProgressReport[]
+  signatures             DocumentSignature[]
+  valuesResults          ValuesResult[]
+  portfolioItems         PortfolioItem[]
+  assignments            Assignment[]
+  goals                  Goal[]
+  consents               Consent[]
+  notes                  Note[]
+  appointments           Appointment[]
+  conversations          Conversation[]
+  journalEntries         JournalEntry[]
+  formSubmissions        FormSubmission[]
+  formReleases           FormRelease[]
+  metricSnapshots        MetricSnapshot[]
+  goalCheckIns           GoalCheckIn[]
+}
+
+model Guardian {
+  id           String    @id @default(cuid())
+  householdId  String
+  household    Household @relation(fields: [householdId], references: [id])
+  name         String
+  email        String
+  relationship String
+  phone        String?
+  isEmergencyContact Boolean @default(true)
+  receivesNotifications Boolean @default(false)
+}
+
+model Assignment {
+  id               String            @id @default(cuid())
+  coachId          String
+  coach            CoachRoster       @relation(fields: [coachId], references: [coachId])
+  clientId         String
+  client           Client            @relation(fields: [clientId], references: [id])
+  status           String
+  createdAt        DateTime          @default(now())
+  sessionAllowance SessionAllowance?
+  sessions         SessionLog[]
+}
+
+model Goal {
+  id          String        @id @default(cuid())
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id])
+  title       String
+  cadence     String
+  status      String
+  remindAtHour Int          @default(20)
+  interactive Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  checkIns    GoalCheckIn[]
+}
+
+model GoalCheckIn {
+  id        String   @id @default(cuid())
+  goalId    String
+  goal      Goal     @relation(fields: [goalId], references: [id])
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  day       String
+  completed Boolean  @default(false)
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@unique([goalId, day])
+}
+
+model Consent {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  kind      String
+  version   String
+  grantedBy String
+  grantedAt DateTime @default(now())
+}
+
+model SessionAllowance {
+  id           String     @id @default(cuid())
+  assignmentId String     @unique
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  allowed      Int
+  used         Int        @default(0)
+  remaining    Int
+}
+
+model SessionLog {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  occurredAt   DateTime
+  minutes      Int
+  summary      String
+  createdById  String
+  createdAt    DateTime   @default(now())
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id])
+  authorId   String
+  authorName String
+  body       String
+  visibility String
+  createdAt  DateTime @default(now())
+}
+
+model CreditWallet {
+  id          String         @id @default(cuid())
+  householdId String         @unique
+  household   Household      @relation(fields: [householdId], references: [id])
+  balance     Int            @default(0)
+  updatedAt   DateTime       @updatedAt
+  ledger      CreditLedger[]
+}
+
+model CreditLedger {
+  id          String       @id @default(cuid())
+  walletId    String
+  wallet      CreditWallet @relation(fields: [walletId], references: [id])
+  delta       Int
+  reason      String
+  actorId     String?
+  appointmentId String?
+  createdAt   DateTime     @default(now())
+}
+
+model AppointmentType {
+  id                   String        @id @default(cuid())
+  name                 String
+  durationMinutes      Int           @default(45)
+  meetingProvider      String        @default("zoom_hipaa")
+  aiScribeInstructions String        @default("")
+  confirmationEmailBody String       @default("")
+  kind                 String        @default("follow_up")
+  clientCanBook        Boolean       @default(true)
+  isVideo              Boolean       @default(true)
+  scribeFormKey        String?
+  confirmationTiming   String        @default("immediate")
+  active               Boolean       @default(true)
+  appointments         Appointment[]
+}
+
+model Appointment {
+  id                String          @id @default(cuid())
+  clientId          String
+  client            Client          @relation(fields: [clientId], references: [id])
+  coachId           String
+  coach             CoachRoster     @relation(fields: [coachId], references: [coachId])
+  appointmentTypeId String?
+  appointmentType   AppointmentType? @relation(fields: [appointmentTypeId], references: [id])
+  startsAt          DateTime
+  endsAt            DateTime
+  status            String
+  meetingUrl        String?
+  creditConsumed    Boolean         @default(false)
+  cancelledAt       DateTime?
+  cancelReason      String?
+  seriesId          String?
+  completedAt       DateTime?
+  aiScribeEnabled   Boolean         @default(true)
+  createdById       String
+  createdAt         DateTime        @default(now())
+  aiNote            AiSessionNote?
+  emailLogs         EmailLog[]
+}
+
+model AiSessionNote {
+  id             String      @id @default(cuid())
+  appointmentId  String      @unique
+  appointment    Appointment @relation(fields: [appointmentId], references: [id])
+  instructions   String
+  transcript     String      @default("")
+  generatedNotes String      @default("")
+  editedNotes    String      @default("")
+  status         String      @default("pending")
+  updatedAt      DateTime    @updatedAt
+  createdAt      DateTime    @default(now())
+}
+
+model Conversation {
+  id           String    @id @default(cuid())
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id])
+  coachId      String
+  status       String    @default("active")
+  archivedAt   DateTime?
+  lastMessageAt DateTime @default(now())
+  createdAt    DateTime  @default(now())
+  messages     Message[]
+
+  @@unique([clientId, coachId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String
+  senderName     String
+  senderRole     String
+  body           String
+  createdAt      DateTime     @default(now())
+}
+
+model JournalEntry {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  authorId      String
+  authorName    String
+  authorRole    String
+  title         String
+  body          String
+  visibility    String
+  resourceUrl   String?
+  aiAssessment  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model FormTemplate {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  name        String
+  stage       String
+  audience    String
+  description String
+  schemaJson  String
+  active      Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  submissions FormSubmission[]
+  releases    FormRelease[]
+}
+
+model FormRelease {
+  id         String       @id @default(cuid())
+  templateId String
+  template   FormTemplate @relation(fields: [templateId], references: [id])
+  clientId   String
+  client     Client       @relation(fields: [clientId], references: [id])
+  releaseAt  DateTime
+  status     String       @default("scheduled")
+  trigger    String
+  appointmentId String?
+  ruleId     String?
+  createdAt  DateTime     @default(now())
+}
+
+model FormReleaseRule {
+  id              String   @id @default(cuid())
+  templateKey     String
+  appointmentKind String   @default("any")
+  anchor          String
+  offsetMinutes   Int      @default(0)
+  firstOnly       Boolean  @default(false)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model ClientTask {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  title       String
+  dueDate     String?
+  done        Boolean  @default(false)
+  createdById String
+  createdAt   DateTime @default(now())
+}
+
+model ProgressReport {
+  id            String    @id @default(cuid())
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  requestedById String?
+  status        String    @default("requested")
+  focusAreas    String    @default("")
+  engagement    String?
+  progress      Int?
+  summary       String    @default("")
+  coachName     String?
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+}
+
+model DocumentTemplate {
+  id         String              @id @default(cuid())
+  key        String              @unique
+  title      String
+  body       String
+  signers    String              @default("client,guardian")
+  version    String              @default("2026.10")
+  active     Boolean             @default(true)
+  createdAt  DateTime            @default(now())
+  signatures DocumentSignature[]
+}
+
+model DocumentSignature {
+  id           String           @id @default(cuid())
+  documentId   String
+  document     DocumentTemplate @relation(fields: [documentId], references: [id])
+  clientId     String
+  client       Client           @relation(fields: [clientId], references: [id])
+  signerRole   String
+  signerName   String
+  signerUserId String
+  version      String
+  signedAt     DateTime         @default(now())
+
+  @@unique([documentId, clientId, signerRole])
+}
+
+model ValuesResult {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id])
+  scoresJson String
+  topValues  String
+  sharePeers Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model PortfolioItem {
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  title       String
+  description String   @default("")
+  category    String
+  level       String
+  levelSource String   @default("auto")
+  gradeYear   Int
+  occurredOn  String?
+  hours       Int?
+  createdAt   DateTime @default(now())
+}
+
+model CoachRequest {
+  id             String   @id @default(cuid())
+  studentName    String
+  studentEmail   String
+  parentName     String   @default("")
+  parentEmail    String   @default("")
+  grade          String   @default("")
+  timezone       String   @default("America/New_York")
+  interests      String   @default("")
+  preferredTimes String   @default("")
+  notes          String   @default("")
+  status         String   @default("new")
+  chosenCoachId  String?
+  createdAt      DateTime @default(now())
+}
+
+model ProgramUpdate {
+  id          String   @id @default(cuid())
+  kind        String
+  title       String
+  summary     String   @default("")
+  url         String   @default("")
+  published   Boolean  @default(true)
+  publishedAt DateTime @default(now())
+}
+
+model FormSubmission {
+  id         String       @id @default(cuid())
+  templateId String
+  template   FormTemplate @relation(fields: [templateId], references: [id])
+  clientId   String
+  client     Client       @relation(fields: [clientId], references: [id])
+  answersJson String
+  submittedById String?
+  createdAt  DateTime     @default(now())
+}
+
+model MetricSnapshot {
+  id                String   @id @default(cuid())
+  clientId          String
+  client            Client   @relation(fields: [clientId], references: [id])
+  stage             String
+  wellBeingScore    Int
+  fulfillmentScore  Int
+  notes             String?
+  capturedAt        DateTime @default(now())
+}
+
+model ProgramSettings {
+  id                      String  @id @default("default")
+  creditsEnabled          Boolean @default(true)
+  cancelRefundHours       Int     @default(24)
+  cancelPolicy            String  @default("window")
+  websiteUrl              String  @default("")
+  podcastUrl              String  @default("")
+  researchUrl             String  @default("")
+  coachCanRestoreCredits  Boolean @default(true)
+  managerSeesAllCalendars Boolean @default(true)
+  notesTakenNotice        Boolean @default(true)
+  defaultMeetingProvider  String  @default("zoom_hipaa")
+  confirmationEmailSubject String @default("Your Coach Me 2 appointment is confirmed")
+  confirmationEmailBody   String  @default("Hi {{clientName}}, your coaching session with {{coachName}} is confirmed for {{startsAt}}.")
+  googleCalendarLinked    Boolean @default(false)
+  outlookCalendarLinked   Boolean @default(false)
+  rolePermissionsJson     String  @default("{}")
+}
+
+model EmailLog {
+  id            String       @id @default(cuid())
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  toEmail       String
+  subject       String
+  body          String
+  status        String
+  createdAt     DateTime     @default(now())
+}
+
+model AccessPacket {
+  id          String             @id @default(cuid())
+  key         String             @unique
+  audience    String
+  kind        String
+  title       String
+  description String             @default("")
+  body        String             @default("")
+  schemaJson  String             @default("[]")
+  sortOrder   Int                @default(0)
+  version     String             @default("2026.10")
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  completions AccessCompletion[]
+}
+
+model AccessCompletion {
+  id           String       @id @default(cuid())
+  packetId     String
+  packet       AccessPacket @relation(fields: [packetId], references: [id])
+  subjectKey   String
+  signerRole   String
+  signerName   String
+  signerUserId String
+  answersJson  String       @default("{}")
+  version      String
+  completedAt  DateTime     @default(now())
+
+  @@unique([packetId, subjectKey, signerRole])
+}
+
+model InternTeam {
+  id          String           @id @default(cuid())
+  name        String
+  focus       String           @default("")
+  description String           @default("")
+  createdAt   DateTime         @default(now())
+  interns     Intern[]
+  channels    InternChannel[]
+  documents   InternDocument[]
+  tasks       InternTask[]
+}
+
+model Intern {
+  id          String     @id @default(cuid())
+  publicId    String     @unique
+  firstName   String
+  lastName    String
+  email       String     @unique
+  teamId      String
+  team        InternTeam @relation(fields: [teamId], references: [id])
+  parentName  String
+  parentEmail String
+  parentPhone String?
+  status      String     @default("pending")
+  user        User?
+  tasks       InternTask[]
+  createdAt   DateTime   @default(now())
+}
+
+model InternChannel {
+  id        String         @id @default(cuid())
+  key       String         @unique
+  name      String
+  kind      String
+  teamId    String?
+  team      InternTeam?    @relation(fields: [teamId], references: [id])
+  createdAt DateTime       @default(now())
+  messages  InternMessage[]
+}
+
+model InternMessage {
+  id         String        @id @default(cuid())
+  channelId  String
+  channel    InternChannel @relation(fields: [channelId], references: [id])
+  senderId   String
+  senderName String
+  body       String
+  createdAt  DateTime      @default(now())
+}
+
+model InternDocument {
+  id         String      @id @default(cuid())
+  title      String
+  body       String
+  teamId     String?
+  team       InternTeam? @relation(fields: [teamId], references: [id])
+  authorId   String
+  authorName String
+  createdAt  DateTime    @default(now())
+}
+
+model InternTask {
+  id         String           @id @default(cuid())
+  title      String
+  detail     String           @default("")
+  status     String           @default("todo")
+  teamId     String?
+  team       InternTeam?      @relation(fields: [teamId], references: [id])
+  assigneeId String?
+  assignee   Intern?          @relation(fields: [assigneeId], references: [id])
+  authorId   String
+  authorName String
+  dueOn      String           @default("")
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  notes      InternTaskNote[]
+}
+
+model InternTaskNote {
+  id         String     @id @default(cuid())
+  taskId     String
+  task       InternTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId   String
+  authorName String
+  body       String
+  createdAt  DateTime   @default(now())
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String
+  metadata  String
+  createdAt DateTime @default(now())
+}
