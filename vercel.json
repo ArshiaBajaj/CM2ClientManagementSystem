@@ -1,4 +1,4 @@
 {
-  "buildCommand": "(prisma db push --skip-generate || (sleep 8 && prisma db push --skip-generate)) && prisma generate && next build",
+  "buildCommand": "(prisma db push --skip-generate || echo 'Database schema step skipped; the app adds new tables itself on start.') && prisma generate && next build",
   "crons": [{ "path": "/api/cron/daily", "schedule": "0 12 * * *" }]
 }

@@ -36,9 +36,10 @@ Optional environment variables:
 
 ## Deploying
 
-Vercel's build runs `prisma db push` first, so new tables and columns reach the database without
-running anything by hand. It refuses changes that would delete data, so a risky schema change stops
-the build instead of losing anything.
+New tables and columns reach the database without running anything by hand, two ways:
+Vercel's build tries `prisma db push` (it refuses changes that would delete data), and when the app
+starts, `src/instrumentation.ts` runs the add-only statements in `src/lib/schema-upgrades.ts` over the
+normal connection. When you add a field to the schema, add its `ADD COLUMN IF NOT EXISTS` line there too.
 
 ## Demo accounts
 
