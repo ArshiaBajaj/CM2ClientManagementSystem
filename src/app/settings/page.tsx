@@ -127,6 +127,35 @@ export default async function SettingsPage({
         </form>
       </section>
 
+      <section id="team" className="mt-10 scroll-mt-6">
+        <h2 className="font-display text-2xl font-semibold tracking-tight">Team accounts</h2>
+        <p className="mt-2 max-w-2xl text-sm text-ink/65">
+          Create a login for a program manager or a coach. You&apos;ll see their temporary password once at the top of the
+          page; they choose their own at first sign-in. Coaches still sign their coach forms before any students appear.
+          Families and interns are added from Clients and Interns.
+        </p>
+        <form action="/api/settings" method="post" className="mt-4 grid max-w-3xl gap-3 sm:grid-cols-[1fr_1fr_10rem_auto] sm:items-end">
+          <input type="hidden" name="intent" value="team_account" />
+          <label className="block text-sm font-medium">
+            Full name
+            <input name="name" required className="field" />
+          </label>
+          <label className="block text-sm font-medium">
+            Email
+            <input type="email" name="email" required className="field" />
+          </label>
+          <label className="block text-sm font-medium">
+            Role
+            <select name="role" className="field" defaultValue="coach">
+              <option value="coach">Coach</option>
+              <option value="team_lead">Program manager</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+          <button className="btn">Create account</button>
+        </form>
+      </section>
+
       <section id="signin" className="mt-10 scroll-mt-6">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Sign-in help</h2>
         <p className="mt-2 max-w-2xl text-sm text-ink/65">

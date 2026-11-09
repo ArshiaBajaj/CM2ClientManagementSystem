@@ -47,6 +47,43 @@ export async function POST(request: NextRequest) {
     return back(request, "signin", "notice", "Temporary password created");
   }
 
+  // Team accounts: managers create real manager and coach logins (each with a one-time temporary password).
+  if (intent === "team_account") {
+    const name = String(form.get("name") ?? "").trim().slice(0, 120);
+    const email = String(form.get("email") ?? "").trim().toLowerCase();
+    const role = String(form.get("role") ?? "");
+    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return back(request, "team", "error", "Add a name and a valid email");
+    if (role !== "coach" && role !== "team_lead" && role !== "admin") return back(request, "team", "error", "Pick a role");
+    if (role === "admin" && user.role !== "admin") return back(request, "team", "error", "Only an admin can create another admin");
+    if (await prisma.user.findUnique({ where: { email } })) {
+      return back(request, "team", "error", "That email already has an account. Use Sign-in help to give it a new password.");
+    }
+    const temp = temporaryPassword();
+    let coachId: string | null = null;
+    if (role === "coach") {
+      coachId = `coach-${crypto.randomUUID().slice(0, 8)}`;
+      await prisma.coachRoster.create({
+        data: {
+          coachId,
+          email,
+          name,
+          status: "active",
+          programRoles: "coach",
+          effectiveAt: new Date(),
+          sourceEventId: `manual-${coachId}`,
+        },
+      });
+    }
+    const created = await prisma.user.create({
+      data: { email, name, role, coachId, password: hashPassword(temp), mustChangePassword: true },
+    });
+    await audit("TeamAccountCreated", "User", created.id, user.id, { role });
+    await setFlash(
+      `${name} can sign in as ${role === "coach" ? "a coach" : role === "admin" ? "an admin" : "a manager"} with ${email} and the temporary password ${temp} (shown once; share it privately).${role === "coach" ? " They sign their coach forms before students open." : ""}`,
+    );
+    return back(request, "team", "notice", "Account created");
+  }
+
   if (intent === "appointment_type") {
     const id = String(form.get("id") ?? "").trim();
     const name = String(form.get("name") ?? "").trim();
