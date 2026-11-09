@@ -8,6 +8,8 @@ import { isLeadOrAdmin, isStaff } from "@/lib/access";
 import { coachGate, internRecord, internClearance, lockDestination } from "@/lib/gate";
 import { getProgramSettings } from "@/lib/settings";
 import { CASELOAD_LABELS, getCaseload, type Caseload } from "@/lib/caseload";
+import { readFlash } from "@/lib/security";
+import { IdleSignOut } from "@/components/idle-sign-out";
 
 type NavItem = { href: string; label: string };
 
@@ -20,6 +22,7 @@ const STAFF_LINKS: NavItem[] = [
   { href: "/goals", label: "Goals" },
   { href: "/forms", label: "Forms" },
   { href: "/metrics", label: "Metrics" },
+  { href: "/world", label: "World View" },
 ];
 
 const MANAGER_LINKS: NavItem[] = [
@@ -44,6 +47,7 @@ const CLIENT_LINKS: NavItem[] = [
 ];
 
 const CLIENT_GROWTH_LINKS: NavItem[] = [
+  { href: "/world", label: "World View" },
   { href: "/values", label: "Values inventory" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/documents", label: "Documents" },
@@ -54,6 +58,7 @@ const GUARDIAN_LINKS: NavItem[] = [
   { href: "/calendar", label: "Appointments" },
   { href: "/documents", label: "Documents" },
   { href: "/credits", label: "Credits" },
+  { href: "/world", label: "World View" },
 ];
 
 const INTERN_LINKS: NavItem[] = [
@@ -162,6 +167,7 @@ export async function Shell({
             : "/";
 
   const settings = await getProgramSettings();
+  const flash = user ? await readFlash() : null;
   // The public site now lives in this app, so these open its pages.
   const programLinks = [
     { href: "/", label: "CoachMe2.world" },
@@ -232,7 +238,15 @@ export async function Shell({
           ) : null}
         </nav>
       </aside>
-      <main className="page-enter mx-auto w-full max-w-6xl px-6 py-10">{children}</main>
+      <main id="main" className="page-enter mx-auto w-full max-w-6xl px-6 py-10">
+        {flash ? (
+          <p role="status" className="mb-6 rounded-lg border border-leaf/30 bg-leaf-soft px-4 py-3 text-sm text-ink">
+            {flash}
+          </p>
+        ) : null}
+        {children}
+      </main>
+      {user ? <IdleSignOut /> : null}
     </div>
   );
 }

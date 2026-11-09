@@ -2,11 +2,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { siteAsset } from "@/lib/site-assets";
 import { CheckInQuiz } from "@/components/site/check-in-quiz";
-import { CtaBand, Section, SmartLink } from "@/components/site/ui";
+import { CtaBand, Meridians, Section } from "@/components/site/ui";
 import { UpdateCards } from "@/components/site/updates";
 import {
   APP_FEATURES,
-  ART,
   COACHES,
   COACHING_IS_NOT,
   FEATURED_QUOTE,
@@ -18,6 +17,30 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const DOORS = [
+  {
+    n: "01",
+    who: "I’m a teen",
+    line: "You call the shots. Find a coach, a group, or just something useful today.",
+    href: "/teens",
+    cta: "Start as a teen",
+  },
+  {
+    n: "02",
+    who: "I’m a parent",
+    line: "How coaching works, what stays private, what you’ll see, and what it costs.",
+    href: "/parents",
+    cta: "Start as a parent",
+  },
+  {
+    n: "03",
+    who: "I want to help",
+    line: "Coach, intern, partner with us, or give. Every path is on one page.",
+    href: "/volunteer",
+    cta: "See ways to help",
+  },
+];
+
 export default async function HomePage() {
   const updates = await prisma.programUpdate.findMany({
     where: { published: true },
@@ -28,109 +51,102 @@ export default async function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="hero-glow border-b border-ink/[0.06]">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-16 pt-16 sm:pt-24 md:grid-cols-[1.15fr_0.85fr]">
+      <section className="border-b border-ink/10">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-20 pt-16 sm:pt-24 lg:grid-cols-[1.2fr_0.8fr]">
           <div>
-            <p className="eyebrow">We help teens get what they want</p>
-            <h1 className="mt-6 font-display text-5xl font-semibold leading-[0.98] tracking-tight sm:text-7xl">
-              Everyone deserves <span className="text-gradient">a coach.</span>
+            <p className="eyebrow">Coaching for teens 14–19</p>
+            <h1 className="mt-6 font-display text-6xl leading-[0.98] sm:text-8xl">
+              Everyone deserves <em className="text-accent-deep">a coach.</em>
             </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink/70">
-              Personalized coaching for ages 14–19. Frictionless. Affordable. You call the shots — a dedicated coach
-              walks with you from where you are to where you want to be.
+            <p className="mt-8 max-w-xl text-xl leading-relaxed text-ink/75">
+              Frictionless. Affordable. You call the shots — a dedicated coach walks with you from where you are to where
+              you want to be.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/scheduling" className="btn px-6 py-3 text-base">
+            <div className="mt-10 flex flex-wrap items-center gap-3">
+              <Link href="/scheduling" className="btn px-7 text-base">
                 Get a coach
               </Link>
-              <Link href="/about" className="btn-secondary px-6 py-3 text-base">
-                Learn more ›
+              <Link href="/services" className="btn-secondary px-7 text-base">
+                How coaching works
               </Link>
             </div>
-            <p className="mt-6 text-sm text-ink/55">
-              Already have a coach?{" "}
-              <Link href="/login" className="link-accent">
-                Sign in to your portal
-              </Link>
-            </p>
           </div>
-          <figure className="relative mx-auto w-full max-w-[15rem] sm:max-w-sm">
-            <div className="absolute -inset-6 rounded-[2.5rem] bg-gradient-to-br from-accent/25 via-white/0 to-leaf/25 blur-2xl" aria-hidden />
-            <img
-              src={siteAsset(ART.founder) ?? ""}
-              alt="Rebecca Oertell, founder of Coach Me 2"
-              className="relative aspect-[4/5] w-full rounded-[2rem] bg-mist object-cover shadow-soft ring-1 ring-ink/5"
-            />
-            {/* Small cards that show the portal teens get with their coach. */}
-            <div className="panel absolute -left-10 top-8 hidden rounded-2xl px-4 py-3 text-sm sm:block">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink/45">Next session</p>
-              <p className="mt-0.5 font-semibold">Thursday · 4:30 PM</p>
-            </div>
-            <div className="panel absolute -right-8 bottom-16 hidden rounded-2xl px-4 py-3 text-sm sm:block">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink/45">Daily goal</p>
-              <p className="mt-0.5 font-semibold">
-                <span className="text-leaf">●</span> Checked in · 6-day streak
-              </p>
-            </div>
-            <figcaption className="panel absolute -bottom-4 left-4 rounded-xl px-3 py-2 text-sm">
-              <span className="font-semibold">Rebecca O.</span> <span className="text-ink/55">· Founder &amp; coach</span>
-            </figcaption>
-          </figure>
-        </div>
-        {/* Proof strip */}
-        <div className="border-t border-ink/[0.06] bg-white/50">
-          <dl className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-6 py-8 md:grid-cols-4">
-            {[
-              [`${COACHES.length}`, "credentialed coaches"],
-              ["14–19", "the ages we serve"],
-              ["~$15", "per group session"],
-              ["501(c)(3)", "nonprofit, worldwide"],
-            ].map(([value, label]) => (
-              <div key={label}>
-                <dt className="sr-only">{label}</dt>
-                <dd className="font-display text-3xl font-semibold tracking-tight text-navy">{value}</dd>
-                <dd className="mt-1 text-sm text-ink/55">{label}</dd>
-              </div>
-            ))}
-          </dl>
+          <Link href="/world-view" className="group relative mx-auto block w-full max-w-sm text-ink">
+            <Meridians className="w-full transition duration-700 group-hover:rotate-[8deg]" />
+            <span className="mt-4 block text-center text-sm text-ink/70">
+              Teens around the world · <span className="font-display text-lg italic text-ink">explore World View</span>
+            </span>
+          </Link>
         </div>
       </section>
 
-      {/* Programs */}
-      <Section eyebrow="Designed for real life" title="Three ways to grow.">
-        <div className="grid gap-5 md:grid-cols-3">
-          {HOME_PROGRAMS.map((program) => (
-            <article key={program.href} className="panel lift flex flex-col rounded-2xl p-6">
-              <div className="flex h-28 items-center justify-center rounded-xl bg-gradient-to-br from-mist/70 to-leaf-soft">
-                <img src={siteAsset(program.art) ?? ""} alt="" className="h-24 w-24" />
-              </div>
-              <h3 className="mt-3 font-display text-xl font-semibold tracking-tight">{program.title}</h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-ink/65">{program.body}</p>
-              <Link href={program.href} className="link-accent mt-4 text-sm">
-                {program.cta} ›
+      {/* Start here: one door for each kind of visitor */}
+      <Section eyebrow="Start here" title="Where would you like to go?">
+        <ul className="grid gap-px overflow-hidden rounded-[2rem] border border-ink/15 bg-ink/15 md:grid-cols-3">
+          {DOORS.map((door) => (
+            <li key={door.n} className="bg-surface">
+              <Link href={door.href} className="group flex h-full flex-col p-8 transition hover:bg-paper sm:p-10">
+                <span className="font-mono text-xs tracking-[0.2em] text-ink/60">{door.n}</span>
+                <span className="mt-6 font-display text-4xl leading-tight">{door.who}</span>
+                <span className="mt-4 flex-1 text-[15px] leading-relaxed text-ink/75">{door.line}</span>
+                <span className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-accent-deep">
+                  {door.cta}
+                  <span aria-hidden className="transition group-hover:translate-x-1">
+                    →
+                  </span>
+                </span>
               </Link>
-            </article>
+            </li>
           ))}
-        </div>
-        <p className="mt-5 text-sm text-ink/60">
-          Also taking shape:{" "}
-          <Link href="/decision-making" className="link-accent">
-            a decision-making series
-          </Link>{" "}
-          for majors, extracurriculars, and the rest of the messy menu.
+        </ul>
+        <p className="mt-6 text-sm text-ink/70">
+          Already coaching with us?{" "}
+          <Link href="/login" className="link-accent">
+            Sign in to your portal
+          </Link>
         </p>
       </Section>
 
-      {/* Testimonials */}
+      {/* Programs */}
+      <section className="border-y border-ink/10 bg-surface/70">
+        <div className="mx-auto max-w-6xl px-6 py-16">
+          <p className="eyebrow">Three ways to grow</p>
+          <ol className="mt-10 divide-y divide-ink/10">
+            {HOME_PROGRAMS.map((program, i) => (
+              <li key={program.href}>
+                <Link
+                  href={program.href}
+                  className="group grid items-center gap-4 py-8 md:grid-cols-[3rem_16rem_1fr_6rem] md:gap-6"
+                >
+                  <span className="font-mono text-xs tracking-[0.2em] text-ink/60">0{i + 1}</span>
+                  <span className="font-display text-3xl group-hover:text-accent-deep">{program.title}</span>
+                  <span className="text-[15px] leading-relaxed text-ink/75">{program.body}</span>
+                  <img src={siteAsset(program.art) ?? ""} alt="" className="hidden h-20 w-20 justify-self-end md:block" />
+                </Link>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-4 text-sm text-ink/70">
+            Coming soon:{" "}
+            <Link href="/decision-making" className="link-accent">
+              a decision-making series
+            </Link>
+            .
+          </p>
+        </div>
+      </section>
+
+      {/* Voices */}
       <Section eyebrow="From students" title="Heard. Challenged. Supported.">
-        <div className="grid gap-5 md:grid-cols-2">
+        <figure className="max-w-4xl">
+          <blockquote className="font-display text-4xl leading-tight sm:text-5xl">“{FEATURED_QUOTE.quote}”</blockquote>
+          <figcaption className="mt-6 text-sm font-semibold uppercase tracking-[0.18em] text-ink/70">{FEATURED_QUOTE.who}</figcaption>
+        </figure>
+        <div className="mt-14 grid gap-10 md:grid-cols-2">
           {TESTIMONIALS.map((t) => (
-            <figure key={t.who} className="panel rounded-2xl p-6">
-              <span className="font-display text-5xl leading-none text-accent/30" aria-hidden>
-                “
-              </span>
-              <blockquote className="-mt-3 text-ink/80">{t.quote}</blockquote>
-              <figcaption className="mt-3 text-sm font-semibold text-ink/60">— {t.who}</figcaption>
+            <figure key={t.who} className="rule pt-6">
+              <blockquote className="text-[17px] leading-relaxed text-ink/85">“{t.quote}”</blockquote>
+              <figcaption className="mt-4 text-sm font-semibold text-ink/70">{t.who}</figcaption>
             </figure>
           ))}
         </div>
@@ -139,125 +155,73 @@ export default async function HomePage() {
       {/* Quiz */}
       <Section
         eyebrow="You deserve a coach if"
-        title="If any of this sounds familiar."
-        intro="Tap what feels true. A short check-in follows — then you can join the list."
+        title="Does any of this sound familiar?"
+        intro="Tap what feels true. A 60-second check-in follows, then you can join the list."
       >
         <CheckInQuiz prompts={QUIZ_PROMPTS.map((p) => ({ text: p.text, art: siteAsset(p.art) }))} />
       </Section>
 
       {/* What coaching is */}
-      <Section eyebrow="What coaching is" title="A relationship that builds motivation, capacity, and follow-through.">
-        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+      <section className="border-y border-ink/10 bg-surface/70">
+        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-2">
           <div>
-            <p className="text-lg leading-relaxed text-ink/70">
-              A coach helps you uncover why you want to begin — and the belief that you can. Coaching is focused on
-              thriving: from where you are now to where you want to be.
+            <p className="eyebrow">What coaching is</p>
+            <h2 className="mt-4 font-display text-4xl leading-tight sm:text-5xl">
+              A relationship that builds motivation, capacity, and follow-through.
+            </h2>
+            <p className="mt-6 text-lg text-ink/75">
+              A coach helps you uncover why you want to begin — and the belief that you can. {COACHES.length} credentialed
+              coaches. Ages 14–19. About $15 a group session, because we&apos;re a nonprofit.
             </p>
-            <figure className="mt-8 border-l-4 border-accent pl-5">
-              <blockquote className="font-display text-xl leading-snug tracking-tight">“{FEATURED_QUOTE.quote}”</blockquote>
-              <figcaption className="mt-3 text-sm font-semibold uppercase tracking-wider text-ink/50">{FEATURED_QUOTE.who}</figcaption>
-            </figure>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <dl className="grid gap-px self-start overflow-hidden rounded-2xl border border-ink/15 bg-ink/15 sm:grid-cols-2">
             {COACHING_IS_NOT.map((item) => (
-              <div key={item.title} className="panel rounded-xl p-5">
-                <h3 className="font-display text-lg font-semibold tracking-tight">{item.title}</h3>
-                <p className="mt-1 text-sm text-ink/65">{item.body}</p>
+              <div key={item.title} className="bg-surface p-6">
+                <dt className="font-display text-2xl">{item.title}</dt>
+                <dd className="mt-2 text-[15px] text-ink/75">{item.body}</dd>
               </div>
             ))}
-          </div>
-        </div>
-      </Section>
-
-      {/* The Coach Me 2 app */}
-      <section className="band">
-        <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div>
-            <p className="eyebrow">The Coach Me 2 app</p>
-            <h2 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-              Your coach, your goals, your week — on your phone and your wrist.
-            </h2>
-            <p className="mt-4 text-lg text-ink/70">
-              Every teen gets a private portal: chat with your coach, book sessions, keep a journal, and check in on the
-              goals you set. Add it to your iPhone home screen and reminders arrive on your Apple Watch.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/login" className="btn">
-                Open the portal
-              </Link>
-              <Link href="/hub" className="btn-secondary">
-                See everything in the hub
-              </Link>
-            </div>
-          </div>
-          <ul className="grid gap-4 sm:grid-cols-2">
-            {APP_FEATURES.map((f) => (
-              <li key={f.title} className="panel lift rounded-2xl p-5">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-lg" aria-hidden>
-                  {f.icon}
-                </span>
-                <h3 className="mt-3 font-display text-lg font-semibold tracking-tight">{f.title}</h3>
-                <p className="mt-1 text-sm text-ink/65">{f.body}</p>
-              </li>
-            ))}
-          </ul>
+          </dl>
         </div>
       </section>
 
-      {/* Ways in: the portal, coaching, podcast and research all start here */}
-      <Section eyebrow="Coach Me 2, all in one place" title="Find your way in.">
-        <div className="grid gap-5 md:grid-cols-3">
-          <WayIn title="Get a coach" body="Book a free 20-minute discovery call, or tell us what you'd like help with and we'll suggest coaches who fit." href="/scheduling" cta="Start here" primary />
-          <WayIn title="I already have a coach" body="Sign in to see appointments, chat with your coach, track your goals, and sign documents." href="/login" cta="Go to my portal" />
-          <WayIn title="Become a coach or intern" body="Credentialed coaches and students who want to build tools, curriculum, research, and stories." href="/volunteer" cta="Get involved" />
+      {/* The portal */}
+      <Section
+        eyebrow="Your Coach Me 2 portal"
+        title="Your coach, your goals, your week — on your phone and your wrist."
+        intro="Every teen gets a private portal. Add it to your iPhone Home Screen and reminders reach your Apple Watch."
+      >
+        <ol className="grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+          {APP_FEATURES.map((f, i) => (
+            <li key={f.title} className="rule pt-5">
+              <span className="font-mono text-xs tracking-[0.2em] text-ink/60">0{i + 1}</span>
+              <h3 className="mt-3 font-display text-2xl">{f.title}</h3>
+              <p className="mt-2 text-[15px] text-ink/75">{f.body}</p>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-10 flex flex-wrap gap-3">
+          <Link href="/login" className="btn">
+            Open the portal
+          </Link>
+          <Link href="/world-view" className="btn-secondary">
+            Explore World View
+          </Link>
         </div>
       </Section>
 
       {updates.length > 0 ? (
-        <Section eyebrow="Podcast and research" title="The latest from our coaches and interns.">
+        <Section eyebrow="Podcast and research" title="Latest from our coaches and interns">
           <UpdateCards updates={updates} />
-          <div className="mt-5 flex gap-4 text-sm">
-            <Link href="/podcast" className="link-accent">
-              All episodes ›
-            </Link>
-            <Link href="/research" className="link-accent">
-              All research ›
-            </Link>
-          </div>
         </Section>
       ) : null}
 
       <CtaBand
         title="Make your life different today."
-        body="A 20-minute discovery call. Thoughtful, unhurried, and entirely about what you need."
+        body="A 20-minute discovery call. Thoughtful, unhurried, and entirely about what you need. If money is the reason you haven’t asked — tell us."
         href={LINKS.discoveryCall}
-        cta="Schedule a call"
         secondary={{ href: "/scheduling", label: "Other ways to start" }}
       />
     </>
-  );
-}
-
-function WayIn({
-  title,
-  body,
-  href,
-  cta,
-  primary,
-}: {
-  title: string;
-  body: string;
-  href: string;
-  cta: string;
-  primary?: boolean;
-}) {
-  return (
-    <article className="panel lift flex flex-col rounded-2xl p-6">
-      <h3 className="font-display text-xl font-semibold tracking-tight">{title}</h3>
-      <p className="mt-2 flex-1 text-sm text-ink/65">{body}</p>
-      <SmartLink href={href} className={primary ? "btn mt-5" : "btn-secondary mt-5"}>
-        {cta}
-      </SmartLink>
-    </article>
   );
 }

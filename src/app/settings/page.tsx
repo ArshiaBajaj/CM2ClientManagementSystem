@@ -127,6 +127,23 @@ export default async function SettingsPage({
         </form>
       </section>
 
+      <section id="signin" className="mt-10 scroll-mt-6">
+        <h2 className="font-display text-2xl font-semibold tracking-tight">Sign-in help</h2>
+        <p className="mt-2 max-w-2xl text-sm text-ink/65">
+          Give someone a new temporary password: a newly activated coach, or anyone locked out. You&apos;ll see it once
+          at the top of the page. They choose their own the next time they sign in. This also clears a lockout from
+          too many wrong passwords.
+        </p>
+        <form action="/api/settings" method="post" className="mt-4 flex max-w-xl flex-wrap items-end gap-3">
+          <input type="hidden" name="intent" value="temp_password" />
+          <label className="block flex-1 text-sm font-medium">
+            Their email
+            <input type="email" name="email" required className="field" />
+          </label>
+          <button className="btn">Create temporary password</button>
+        </form>
+      </section>
+
       <section id="access" className="mt-10 scroll-mt-6">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Access</h2>
         <p className="mt-1 text-sm text-ink/55">

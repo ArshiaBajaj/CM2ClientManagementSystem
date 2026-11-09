@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { canAccessClient, isLeadOrAdmin, noteVisibleTo } from "@/lib/access";
 import { guardClientWorkspace } from "@/lib/gate";
 import { prisma } from "@/lib/db";
+import { audit } from "@/lib/security";
 import { Notice, Shell } from "@/components/shell";
 import { Avatar } from "@/components/avatar";
 import { ensureWallet } from "@/lib/credits";
@@ -35,6 +36,8 @@ export default async function ClientDetailPage({
   const { error, notice, appts } = await searchParams;
   const access = await canAccessClient(user, id);
   if (!access.ok) redirect("/clients?error=That%20student%20is%20not%20assigned%20to%20you");
+  // Access log: who opened which client record, and when.
+  await audit("ClientRecordViewed", "Client", id, user.id, { role: user.role });
 
   const client = await prisma.client.findUnique({
     where: { id },

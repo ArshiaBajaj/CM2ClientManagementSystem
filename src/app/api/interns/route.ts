@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { notifyUsers } from "@/lib/push";
+import { setFlash, temporaryPassword } from "@/lib/security";
 import { hashPassword } from "@/lib/password";
 import { nextInternPublicId } from "@/lib/ids";
 import { answersFromForm, ensureProgramChannels, ensureTeamChannel, internClearance, internRecord } from "@/lib/gate";
@@ -87,12 +88,13 @@ async function enroll(request: NextRequest, user: NonNullable<Awaited<ReturnType
       status: "pending",
     },
   });
-  const password = hashPassword("demo1234");
+  const internTemp = temporaryPassword();
+  const parentTemp = temporaryPassword();
   await prisma.user.create({
     data: {
       email,
       name: `${firstName} ${lastName}`,
-      password,
+      password: hashPassword(internTemp),
       role: "intern",
       internId: intern.id,
       mustChangePassword: true,
@@ -103,18 +105,21 @@ async function enroll(request: NextRequest, user: NonNullable<Awaited<ReturnType
       data: {
         email: parentEmail,
         name: parentName,
-        password,
+        password: hashPassword(parentTemp),
         role: "intern_parent",
         mustChangePassword: true,
       },
     });
   }
 
+  await setFlash(
+    `Temporary passwords (shown once, share them privately): ${email}: ${internTemp}${parentUser ? "" : ` · ${parentEmail}: ${parentTemp}`}.`,
+  );
   return go(
     request,
     "/interns",
     "notice",
-    `${firstName} ${lastName} enrolled on ${team.name}. They sign in with ${email} and the temporary password demo1234. Parent: ${parentEmail}.`,
+    `${firstName} ${lastName} enrolled on ${team.name}. Their temporary passwords are shown above.`,
   );
 }
 

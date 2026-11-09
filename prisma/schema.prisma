@@ -90,6 +90,10 @@ model Client {
   program                String              @default("cm2")
   /// Set for private clients: the coachId of the coach who owns this client.
   ownerCoachId           String?
+  /// World View: country only (never a city or address), whether the teen asked to join a circle, and interests.
+  country                String?
+  worldOptIn             Boolean             @default(false)
+  worldInterests         String              @default("")
   lastActiveAt           DateTime?
   createdAt              DateTime            @default(now())
   tasks                  ClientTask[]
@@ -474,6 +478,43 @@ model PushSubscription {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+/// World View: a small cross-border group of teens, moderated by a Coach Me 2 coach.
+model WorldCircle {
+  id        String   @id @default(cuid())
+  name      String
+  theme     String
+  /// proposed (made by the matcher) → active (a manager assigned a coach) → closed
+  status    String   @default("proposed")
+  coachId   String?
+  createdAt DateTime @default(now())
+  members   WorldCircleMember[]
+  messages  WorldCircleMessage[]
+}
+
+model WorldCircleMember {
+  id        String      @id @default(cuid())
+  circleId  String
+  circle    WorldCircle @relation(fields: [circleId], references: [id])
+  clientId  String
+  createdAt DateTime    @default(now())
+
+  @@unique([circleId, clientId])
+  @@index([clientId])
+}
+
+model WorldCircleMessage {
+  id         String      @id @default(cuid())
+  circleId   String
+  circle     WorldCircle @relation(fields: [circleId], references: [id])
+  senderId   String
+  senderName String
+  senderRole String
+  body       String
+  createdAt  DateTime    @default(now())
+
+  @@index([circleId, createdAt])
 }
 
 model ProgramUpdate {

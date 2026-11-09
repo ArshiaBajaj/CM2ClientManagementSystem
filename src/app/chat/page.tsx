@@ -85,6 +85,7 @@ export default async function ChatPage({
             />
             <select
               name="status"
+              aria-label="Show conversations"
               defaultValue={filter}
               className="w-full rounded-lg border border-ink/15 bg-paper px-3 py-2 text-sm"
             >

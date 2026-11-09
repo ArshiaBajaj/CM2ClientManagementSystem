@@ -32,7 +32,7 @@ export default async function EnrollInternPage({
       </p>
       <Guide
         steps={[
-          { title: "Create the logins", body: "Both people can sign in with the temporary password demo1234 and will be asked to choose their own." },
+          { title: "Create the logins", body: "Each person gets their own temporary password, shown to you once, and picks a new one at first sign-in." },
           { title: "They sign", body: "The intern sees their agreements. The parent sees the permission forms. Either can sign first." },
           { title: "Chat opens", body: "When both are signed, the intern gets Home, Team chat, and Documents. You can follow along from Program chat." },
         ]}

@@ -5,27 +5,29 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#0a0f1a",
-        paper: "#eef2f8",
-        surface: "#ffffff",
+        // "Warm Meridian" (docs/design/philosophy.md)
+        ink: "#16202b",
+        paper: "#f4efe6",
+        surface: "#fffdf9",
         accent: {
-          DEFAULT: "#3b7fc4",
-          deep: "#245f9a",
+          DEFAULT: "#2f6fb0",
+          deep: "#235a91",
         },
-        mist: "#d7e3f2",
-        leaf: { DEFAULT: "#4a9625", soft: "#e7f3e1" },
-        navy: "#13263d",
-        signal: "#c2410c",
-        // Keep legacy aliases so any missed class still resolves during migration
-        moss: "#3b7fc4",
-        clay: "#c2410c",
+        mist: "#e6ddd0",
+        signal: "#b4472b",
+        ember: "#c2643b",
+        leaf: { DEFAULT: "#4a7a2e", soft: "#e4ecd9" },
+        navy: "#16202b",
+        // Legacy aliases used by older workspace screens
+        moss: "#2f6fb0",
+        clay: "#b4472b",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         display: ["var(--font-display)", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        soft: "0 18px 50px -28px rgba(10, 15, 26, 0.35)",
+        soft: "0 1px 0 rgba(22, 32, 43, 0.04), 0 12px 32px -24px rgba(22, 32, 43, 0.35)",
       },
     },
   },

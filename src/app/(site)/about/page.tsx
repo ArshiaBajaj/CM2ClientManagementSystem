@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { CtaBand, PageHero, Section } from "@/components/site/ui";
+import { Card, CtaBand, PageHero, Section } from "@/components/site/ui";
 
-export const metadata: Metadata = { title: "Our mission" };
+export const metadata: Metadata = { title: "Mission & people" };
 
 export default function AboutPage() {
   return (
@@ -34,6 +34,27 @@ export default function AboutPage() {
             your goals but also the respect that comes from taking an active role in your own life. So, are you ready to
             redefine what success looks like for you?
           </p>
+        </div>
+      </Section>
+      <Section eyebrow="Our people" title="The people behind Coach Me 2.">
+        <div className="grid gap-6 md:grid-cols-3">
+          <Card title="Coaches" href="/meet-our-coaches" cta="Meet our coaches">
+            Credentialed coaches from around the world, ready when you are.
+          </Card>
+          <Card title="Board" href="/team" cta="Meet the board">
+            Governance with psychology, psychiatry, and inclusive talent leadership.
+          </Card>
+          <Card title="Interns & innovators" href="/innovators" cta="Meet the interns">
+            Students building our website, research, curriculum, and stories.
+          </Card>
+        </div>
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <Card title="Podcast" href="/podcast" cta="Listen">
+            Teens and coaches on pressure, purpose, and what actually helps.
+          </Card>
+          <Card title="Research" href="/research" cta="Read the findings">
+            What our research interns are learning about coaching and fulfillment.
+          </Card>
         </div>
       </Section>
       <CtaBand

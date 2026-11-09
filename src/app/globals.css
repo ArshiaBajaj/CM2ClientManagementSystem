@@ -2,131 +2,138 @@
 @tailwind components;
 @tailwind utilities;
 
+/* "Warm Meridian": warm paper, deep ink, one clear blue. See docs/design/philosophy.md. */
 :root {
-  --ink: #0a0f1a;
-  --paper: #eef2f8;
-  --surface: #ffffff;
-  --accent: #3b7fc4;
-  --accent-deep: #245f9a;
-  --signal: #c2410c;
-  --mist: #d7e3f2;
-  --glow: rgba(59, 127, 196, 0.22);
+  --ink: #16202b;
+  --paper: #f4efe6;
+  --surface: #fffdf9;
+  --accent: #2f6fb0;
+  --accent-deep: #235a91;
+  --leaf: #4a7a2e;
+  --ember: #c2643b;
 }
 
 body {
   color: var(--ink);
-  background:
-    radial-gradient(1200px 600px at 12% -10%, var(--glow), transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, rgba(36, 95, 154, 0.12), transparent 50%),
-    linear-gradient(180deg, #f7f9fc 0%, var(--paper) 48%, #e8eef7 100%);
-  background-attachment: fixed;
+  background-color: var(--paper);
+  /* A faint paper grain, so the page feels printed rather than rendered. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.09 0 0 0 0 0.12 0 0 0 0 0.17 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   min-height: 100vh;
+  font-feature-settings: "ss01", "cv11";
 }
 
 a {
   text-underline-offset: 3px;
 }
 
+/* Keyboard users always see where they are (WCAG 2.4.7). */
+:focus-visible {
+  outline: 3px solid var(--accent-deep);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Small, faint text must still meet 4.5:1 contrast (WCAG 1.4.3). These lift the lightest tints used across the app. */
+.text-ink\/35,
+.text-ink\/40,
+.text-ink\/45,
+.text-ink\/50,
+.text-ink\/55,
+.text-ink\/60 {
+  color: rgb(22 32 43 / 0.7);
+}
+.text-paper\/40,
+.text-paper\/45,
+.text-paper\/50 {
+  color: rgb(244 239 230 / 0.72);
+}
+.placeholder\:text-ink\/35::placeholder {
+  color: rgb(22 32 43 / 0.55);
+}
+
 @layer components {
   .font-display {
-    font-family: var(--font-display), system-ui, sans-serif;
-    letter-spacing: -0.03em;
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
   }
 
   .label-caps {
-    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-ink/45;
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-ink/60;
   }
 
-  .panel {
-    @apply border border-ink/[0.1] bg-surface shadow-soft;
-  }
-
-  .field {
-    @apply mt-2 w-full rounded-md border border-ink/[0.12] bg-paper px-3.5 py-2.5 text-sm outline-none transition
-      placeholder:text-ink/35 focus:border-accent focus:ring-2 focus:ring-accent/20;
-  }
-
-  .btn {
-    @apply inline-flex items-center justify-center rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-white
-      transition duration-200 hover:bg-accent-deep hover:-translate-y-px active:translate-y-0;
-  }
-
-  .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-md border border-ink/[0.12] bg-surface/70 px-5 py-2.5 text-sm
-      font-semibold text-ink transition duration-200 hover:border-accent/40 hover:bg-white;
-  }
-
-  .btn-ghost {
-    @apply inline-flex items-center justify-center rounded-md px-3 py-2 text-sm text-ink/55 transition hover:text-ink;
-  }
-
-  .chip {
-    @apply flex cursor-pointer items-center gap-1.5 rounded-full border border-ink/15 bg-white px-3 py-1.5 text-sm
-      transition hover:border-ink/30 has-[:checked]:border-accent has-[:checked]:bg-accent/10;
-  }
-
-  .link-accent {
-    @apply font-medium text-accent underline decoration-accent/30 underline-offset-4 transition hover:decoration-accent;
-  }
-
-  /* Public site */
+  /* Small mono-feeling caption above headings. */
   .eyebrow {
-    @apply inline-flex items-center gap-2 rounded-full border border-accent/20 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent-deep backdrop-blur;
+    @apply inline-flex items-center gap-3 text-[12px] font-semibold uppercase tracking-[0.2em] text-accent-deep;
   }
 
   .eyebrow::before {
     content: "";
-    @apply h-1.5 w-1.5 rounded-full bg-leaf;
+    @apply h-px w-8 bg-accent-deep;
   }
 
-  .hero-glow {
-    background:
-      radial-gradient(700px 380px at 85% 10%, rgba(74, 150, 37, 0.12), transparent 60%),
-      radial-gradient(900px 500px at 10% 0%, rgba(59, 127, 196, 0.18), transparent 60%);
+  .panel {
+    @apply border border-ink/[0.12] bg-surface;
   }
 
-  .text-gradient {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(100deg, #245f9a 10%, #3b7fc4 55%, #4a9625 100%);
+  .field {
+    @apply mt-2 w-full rounded-md border border-ink/25 bg-surface px-3.5 py-2.5 text-[15px] outline-none transition
+      placeholder:text-ink/35 focus:border-accent focus:ring-2 focus:ring-accent/25;
   }
 
-  .band {
-    @apply border-y border-ink/[0.06] bg-white/60;
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper
+      transition duration-200 hover:bg-accent-deep;
+  }
+
+  .btn-secondary {
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-full border border-ink/30 bg-transparent px-5 py-2.5 text-sm
+      font-semibold text-ink transition duration-200 hover:border-ink hover:bg-surface;
+  }
+
+  .btn-ghost {
+    @apply inline-flex min-h-[44px] items-center justify-center rounded-md px-3 py-2 text-sm text-ink/70 transition hover:text-ink;
+  }
+
+  .chip {
+    @apply flex cursor-pointer items-center gap-1.5 rounded-full border border-ink/20 bg-surface px-3 py-1.5 text-sm
+      transition hover:border-ink/40 has-[:checked]:border-accent has-[:checked]:bg-accent/10;
+  }
+
+  .link-accent {
+    @apply font-medium text-accent-deep underline decoration-accent/40 underline-offset-4 transition hover:decoration-accent;
+  }
+
+  .rule {
+    @apply border-t border-ink/15;
   }
 
   .lift {
-    @apply transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_60px_-30px_rgba(10,15,26,0.45)];
+    @apply transition duration-300 hover:-translate-y-0.5 hover:border-ink/30;
   }
 
   .page-enter {
-    animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   .stagger > * {
-    animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  .stagger > *:nth-child(1) {
-    animation-delay: 0.04s;
+    animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
   .stagger > *:nth-child(2) {
-    animation-delay: 0.1s;
+    animation-delay: 0.06s;
   }
   .stagger > *:nth-child(3) {
-    animation-delay: 0.16s;
+    animation-delay: 0.12s;
   }
   .stagger > *:nth-child(4) {
-    animation-delay: 0.22s;
-  }
-  .stagger > *:nth-child(5) {
-    animation-delay: 0.28s;
+    animation-delay: 0.18s;
   }
 }
 
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -135,12 +142,10 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-enter,
-  .stagger > * {
-    animation: none;
-  }
-
-  .btn:hover {
-    transform: none;
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }

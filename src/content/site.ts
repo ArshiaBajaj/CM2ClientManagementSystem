@@ -30,54 +30,16 @@ export const ART = {
   founder: "/photos/rebecca-oertell.jpg",
 } as const;
 
-export type NavGroup = { label: string; items: Array<{ href: string; label: string; blurb?: string }> };
-
-/** One menu for the whole site. */
-export const NAV: NavGroup[] = [
-  {
-    label: "About",
-    items: [
-      { href: "/about", label: "Mission & story", blurb: "Why every teen deserves a coach" },
-      { href: "/meet-our-coaches", label: "Coaches", blurb: "Credentialed, ready when you are" },
-      { href: "/team", label: "Board", blurb: "Who keeps us accountable" },
-      { href: "/innovators", label: "Interns & innovators", blurb: "Students building Coach Me 2" },
-    ],
-  },
-  {
-    label: "Coaching",
-    items: [
-      { href: "/services", label: "1:1 coaching", blurb: "A dedicated coach, your goals" },
-      { href: "/group-experiences", label: "Group coaching", blurb: "Find your ikigai with a crew" },
-      { href: "/content", label: "EvolvED leadership", blurb: "A 12-week leadership lab" },
-      { href: "/decision-making", label: "Decision making", blurb: "Coming soon" },
-    ],
-  },
-  {
-    label: "Who it's for",
-    items: [
-      { href: "/teens", label: "Teens", blurb: "You call the shots" },
-      { href: "/parents", label: "Parents", blurb: "How coaching works" },
-      { href: "/partners", label: "Schools & partners", blurb: "Bring coaching to more teens" },
-    ],
-  },
-  {
-    label: "Explore",
-    items: [
-      { href: "/student-resources", label: "Student resources", blurb: "Crisis lines, college, wellbeing" },
-      { href: "/podcast", label: "Podcast", blurb: "Teens and coaches, talking honestly" },
-      { href: "/research", label: "Research", blurb: "What our interns are finding" },
-      { href: "/hub", label: "Coach Me 2 hub", blurb: "Everything in one place" },
-    ],
-  },
-  {
-    label: "Get involved",
-    items: [
-      { href: "/volunteer", label: "Volunteer or intern", blurb: "Find your lane" },
-      { href: "/donate", label: "Donate", blurb: "Keep coaching affordable" },
-      { href: "/contact", label: "Contact us", blurb: "We'd love to hear from you" },
-    ],
-  },
-];
+/**
+ * The whole site menu: four plain links, no dropdowns. Everything else is one click from these pages.
+ * "Get help now", "Donate", and "Sign in" sit in the slim bar above, and "Get a coach" is the one button.
+ */
+export const PRIMARY_NAV = [
+  { href: "/services", label: "Coaching" },
+  { href: "/parents", label: "For parents" },
+  { href: "/about", label: "Our people" },
+  { href: "/volunteer", label: "Get involved" },
+] as const;
 
 export const HOME_PROGRAMS = [
   {
@@ -159,12 +121,12 @@ export const QUIZ_STEPS = [
 
 /** What the portal does, shown on the home page. */
 export const APP_FEATURES = [
-  { icon: "💬", title: "Chat with your coach", body: "Private, between you and your coach. Parents get logistics, not your conversations." },
-  { icon: "🎯", title: "Daily goal check-ins", body: "Set goals with your coach and check in each day. Streaks keep you honest." },
-  { icon: "⌚", title: "Apple Watch reminders", body: "Session and goal reminders tap your wrist. No app store needed." },
-  { icon: "📅", title: "Sessions in your calendar", body: "One tap adds every session to your phone's calendar, and updates itself." },
-  { icon: "🧭", title: "Values & world view", body: "Find what matters most to you and see how it shapes your choices." },
-  { icon: "🏆", title: "Achievement portfolio", body: "Collect what you've built and proud moments for college and job apps." },
+  { title: "Chat with your coach", body: "Private, between you and your coach. Parents get logistics, not your conversations." },
+  { title: "Daily goal check-ins", body: "Set goals with your coach and check in each day. Streaks keep you honest." },
+  { title: "Apple Watch reminders", body: "Session and goal reminders tap your wrist. No app store needed." },
+  { title: "Sessions in your calendar", body: "One tap adds every session to your phone's calendar, and updates itself." },
+  { title: "Values & world view", body: "Find what matters most to you and see how it shapes your choices." },
+  { title: "Achievement portfolio", body: "Collect what you've built and proud moments for college and job apps." },
 ];
 
 export const COACHING_IS_NOT = [

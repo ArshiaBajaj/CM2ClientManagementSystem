@@ -108,8 +108,8 @@ export default async function EnrollClientPage({
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" name="createClientLogin" value="1" defaultChecked={Boolean(req)} className="mt-1" />
             <span>
-              Create a student login. They sign in with the temporary password{" "}
-              <code className="text-xs">demo1234</code> and set their own.
+              Create a student login. You&apos;ll see a temporary password once, to share privately; they set their own
+              at first sign-in.
             </span>
           </label>
         </fieldset>
@@ -168,8 +168,7 @@ export default async function EnrollClientPage({
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" name="createGuardianLogin" value="1" className="mt-1" defaultChecked />
             <span>
-              Create a parent login (temporary password <code className="text-xs">demo1234</code>) if
-              the email is new.
+              Create a parent login (with its own one-time temporary password) if the email is new.
             </span>
           </label>
         </fieldset>

@@ -381,7 +381,7 @@ async function TeamWeek({ weekOffset }: { weekOffset: number }) {
           </Link>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Team week calendar">
         <table className="w-full min-w-[860px] table-fixed border-collapse text-xs">
           <thead>
             <tr className="text-left text-ink/50">

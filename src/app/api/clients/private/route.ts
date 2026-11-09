@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { nextPrivateClientPublicId } from "@/lib/ids";
 import { CASELOAD_COOKIE } from "@/lib/caseload";
+import { setFlash, temporaryPassword } from "@/lib/security";
 
 function back(request: NextRequest, message: string) {
   return NextResponse.redirect(
@@ -85,11 +86,13 @@ export async function POST(request: NextRequest) {
   }
 
   if (createClientLogin) {
+    const temp = temporaryPassword();
+    await setFlash(`Temporary password for ${clientEmail} (shown once): ${temp}. They pick their own at first sign-in.`);
     await prisma.user.create({
       data: {
         email: clientEmail,
         name: `${firstName} ${lastName}`,
-        password: hashPassword("demo1234"),
+        password: hashPassword(temp),
         role: "client",
         clientId: client.id,
         mustChangePassword: true,

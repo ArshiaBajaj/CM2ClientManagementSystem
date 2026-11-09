@@ -25,7 +25,7 @@ export default async function StudentResourcesPage({
         </p>
       </PageHero>
 
-      <Section eyebrow="If you need help now" title="You do not have to wait for a coach.">
+      <Section id="help-now" eyebrow="If you need help now" title="You do not have to wait for a coach.">
         <p className="-mt-4 mb-6 max-w-2xl text-ink/65">
           Coaching is not therapy or crisis care. If you are in immediate danger, call local emergency services. These
           lines are free, confidential, and staffed by people whose job is to stay with you.

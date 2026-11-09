@@ -2,6 +2,28 @@ import Link from "next/link";
 import { siteAsset } from "@/lib/site-assets";
 import { LINKS, type Person } from "@/content/site";
 
+/** Fine globe lines used as a quiet motif (the "Warm Meridian" mark). Decorative only. */
+export function Meridians({ className = "" }: { className?: string }) {
+  const meridians = [0.15, 0.35, 0.55, 0.75, 0.92];
+  const parallels = [-0.66, -0.33, 0, 0.33, 0.66];
+  return (
+    <svg viewBox="-110 -110 220 220" className={className} aria-hidden="true" fill="none">
+      <circle r="100" stroke="currentColor" strokeOpacity=".55" />
+      {meridians.map((m) => (
+        <ellipse key={m} rx={100 * m} ry="100" stroke="currentColor" strokeOpacity=".22" />
+      ))}
+      <line x1="0" y1="-100" x2="0" y2="100" stroke="currentColor" strokeOpacity=".35" />
+      {parallels.map((p) => {
+        const half = 100 * Math.sqrt(1 - p * p);
+        return <line key={p} x1={-half} y1={p * 100} x2={half} y2={p * 100} stroke="currentColor" strokeOpacity=".22" />;
+      })}
+      <path d="M-62 38 Q -5 -62 55 -46" stroke="#c2643b" strokeWidth="1.6" />
+      <circle cx="-62" cy="38" r="4" fill="#2f6fb0" />
+      <circle cx="55" cy="-46" r="4" fill="#4a7a2e" />
+    </svg>
+  );
+}
+
 export function PageHero({
   eyebrow,
   title,
@@ -15,19 +37,14 @@ export function PageHero({
 }) {
   const src = siteAsset(art);
   return (
-    <section className="hero-glow border-b border-ink/[0.06]">
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-6 pb-14 pt-16 sm:pt-24 md:grid-cols-[1fr_auto]">
+    <section className="border-b border-ink/10">
+      <div className="mx-auto grid max-w-6xl items-end gap-10 px-6 pb-14 pt-16 sm:pt-24 md:grid-cols-[1fr_auto]">
         <div className="max-w-3xl">
           <p className="eyebrow">{eyebrow}</p>
-          <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.04] tracking-tight sm:text-6xl">{title}</h1>
-          {children ? <div className="mt-6 space-y-4 text-lg leading-relaxed text-ink/70">{children}</div> : null}
+          <h1 className="mt-6 font-display text-5xl leading-[1.02] sm:text-7xl">{title}</h1>
+          {children ? <div className="mt-6 max-w-2xl space-y-4 text-lg leading-relaxed text-ink/75">{children}</div> : null}
         </div>
-        {src ? (
-          <div className="relative mx-auto hidden md:block">
-            <div className="absolute inset-4 rounded-full bg-gradient-to-br from-accent/20 to-leaf/20 blur-2xl" aria-hidden />
-            <img src={src} alt="" className="relative h-56 w-56" />
-          </div>
-        ) : null}
+        {src ? <img src={src} alt="" className="mx-auto hidden h-44 w-44 md:block" /> : null}
       </div>
     </section>
   );
@@ -39,19 +56,21 @@ export function Section({
   intro,
   children,
   className = "",
+  id,
 }: {
   title?: string;
   eyebrow?: string;
   intro?: string;
   children: React.ReactNode;
   className?: string;
+  id?: string;
 }) {
   return (
-    <section className={`mx-auto max-w-6xl px-6 py-14 ${className}`}>
+    <section id={id} className={`mx-auto max-w-6xl scroll-mt-28 px-6 py-16 ${className}`}>
       {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
-      {title ? <h2 className="mt-4 max-w-3xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h2> : null}
-      {intro ? <p className="mt-3 max-w-2xl text-ink/65">{intro}</p> : null}
-      <div className={title || intro ? "mt-8" : ""}>{children}</div>
+      {title ? <h2 className="mt-4 max-w-3xl font-display text-4xl leading-tight sm:text-5xl">{title}</h2> : null}
+      {intro ? <p className="mt-4 max-w-2xl text-lg text-ink/70">{intro}</p> : null}
+      <div className={title || intro ? "mt-10" : ""}>{children}</div>
     </section>
   );
 }
@@ -72,16 +91,20 @@ export function Card({
   external?: boolean;
 }) {
   return (
-    <article className="panel lift flex flex-col rounded-2xl p-6">
-      {tag ? <p className="label-caps text-accent">{tag}</p> : null}
-      <h3 className={`font-display text-xl font-semibold tracking-tight ${tag ? "mt-2" : ""}`}>{title}</h3>
-      <div className="mt-2 flex-1 text-sm leading-relaxed text-ink/65">{children}</div>
-      {href && cta ? <SmartLink href={href} external={external} className="link-accent mt-4 text-sm">{cta} ›</SmartLink> : null}
+    <article className="panel lift flex flex-col rounded-2xl p-7">
+      {tag ? <p className="label-caps text-accent-deep">{tag}</p> : null}
+      <h3 className={`font-display text-2xl leading-snug ${tag ? "mt-3" : ""}`}>{title}</h3>
+      <div className="mt-3 flex-1 text-[15px] leading-relaxed text-ink/75">{children}</div>
+      {href && cta ? (
+        <SmartLink href={href} external={external} className="link-accent mt-5 text-sm">
+          {cta}
+        </SmartLink>
+      ) : null}
     </article>
   );
 }
 
-/** Internal links use Next's router; anything starting with http opens in a new tab. */
+/** Internal links use Next's router; anything starting with http opens in a new tab and says so to screen readers. */
 export function SmartLink({
   href,
   children,
@@ -94,9 +117,11 @@ export function SmartLink({
   external?: boolean;
 }) {
   if (external || href.startsWith("http") || href.startsWith("mailto:")) {
+    const newTab = href.startsWith("http");
     return (
-      <a href={href} className={className} {...(href.startsWith("http") ? { target: "_blank", rel: "noreferrer" } : {})}>
+      <a href={href} className={className} {...(newTab ? { target: "_blank", rel: "noreferrer" } : {})}>
         {children}
+        {newTab ? <span className="sr-only"> (opens in a new tab)</span> : null}
       </a>
     );
   }
@@ -111,7 +136,7 @@ export function CtaBand({
   title,
   body,
   href = LINKS.discoveryCall,
-  cta = "Schedule a call",
+  cta = "Book a 20-minute call",
   secondary,
 }: {
   title: string;
@@ -121,24 +146,20 @@ export function CtaBand({
   secondary?: { href: string; label: string };
 }) {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-14">
-      <div className="relative overflow-hidden rounded-3xl bg-navy px-6 py-12 text-paper shadow-soft sm:px-12">
-        <div
-          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/40 blur-3xl"
-          aria-hidden
-        />
-        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-leaf/30 blur-3xl" aria-hidden />
-        <div className="relative">
-          <h2 className="max-w-2xl font-display text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h2>
-          <p className="mt-3 max-w-xl text-lg text-paper/75">{body}</p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <SmartLink href={href} className="btn bg-white text-navy hover:bg-paper">
+    <section className="mx-auto max-w-6xl px-6 py-16">
+      <div className="relative overflow-hidden rounded-[2rem] bg-ink px-8 py-14 text-paper sm:px-14">
+        <Meridians className="pointer-events-none absolute -right-16 -top-10 hidden h-80 w-80 text-paper md:block" />
+        <div className="relative max-w-2xl">
+          <h2 className="font-display text-4xl leading-tight sm:text-5xl">{title}</h2>
+          <p className="mt-4 text-lg text-paper/80">{body}</p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <SmartLink href={href} className="btn bg-paper text-ink hover:bg-surface">
               {cta}
             </SmartLink>
             {secondary ? (
               <SmartLink
                 href={secondary.href}
-                className="inline-flex items-center justify-center rounded-md border border-white/25 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-paper/40 px-5 py-2.5 text-sm font-semibold text-paper hover:border-paper"
               >
                 {secondary.label}
               </SmartLink>
@@ -168,44 +189,45 @@ function initials(name: string) {
 /** People cards. The full bio opens in place, so nothing needs JavaScript. */
 export function PeopleGrid({ people }: { people: Person[] }) {
   return (
-    <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
       {people.map((person) => {
         const photo = siteAsset(person.photo);
         return (
-          <li key={`${person.name}-${person.role}`} className="panel lift flex flex-col rounded-2xl p-5">
-            <div className="flex items-center gap-4">
-              {photo ? (
-                <img
-                  src={photo}
-                  alt={person.name}
-                  loading="lazy"
-                  className="h-16 w-16 shrink-0 rounded-full bg-mist object-cover ring-4 ring-white shadow-soft"
-                />
-              ) : (
-                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-mist font-display text-lg font-semibold text-accent-deep">
-                  {initials(person.name)}
-                </span>
-              )}
-              <div className="min-w-0">
-                <h3 className="font-display text-lg font-semibold tracking-tight">{person.name}</h3>
-                <p className="text-sm text-ink/60">{person.role}</p>
-                {person.place ? <p className="text-xs text-ink/45">{person.place}</p> : null}
-              </div>
-            </div>
-            <p className="mt-4 text-sm text-ink/70">{person.short}</p>
+          <li key={`${person.name}-${person.role}`} className="flex flex-col">
+            {photo ? (
+              <img
+                src={photo}
+                alt={`Portrait of ${person.name}`}
+                loading="lazy"
+                className="aspect-[4/5] w-full rounded-2xl bg-mist object-cover"
+              />
+            ) : (
+              <span
+                className="flex aspect-[4/5] w-full items-center justify-center rounded-2xl bg-mist font-display text-6xl text-accent-deep"
+                aria-hidden
+              >
+                {initials(person.name)}
+              </span>
+            )}
+            <h3 className="mt-5 font-display text-2xl">{person.name}</h3>
+            <p className="mt-1 text-sm font-medium text-ink/70">
+              {person.role}
+              {person.place ? ` · ${person.place}` : ""}
+            </p>
+            <p className="mt-3 text-[15px] text-ink/75">{person.short}</p>
             <details className="group mt-3">
               <summary className="link-accent cursor-pointer list-none text-sm [&::-webkit-details-marker]:hidden">
-                <span className="group-open:hidden">Meet {shortName(person.name)} ›</span>
+                <span className="group-open:hidden">Read {shortName(person.name)}&apos;s story</span>
                 <span className="hidden group-open:inline">Close</span>
               </summary>
-              <div className="mt-3 space-y-3 text-sm leading-relaxed text-ink/70">
+              <div className="mt-3 space-y-3 text-[15px] leading-relaxed text-ink/75">
                 {person.bio.map((paragraph, i) => (
                   <p key={i}>{paragraph}</p>
                 ))}
                 {person.website ? (
-                  <a href={person.website} target="_blank" rel="noreferrer" className="link-accent">
-                    {person.website.replace(/^https?:\/\/(www\.)?/, "")} ↗
-                  </a>
+                  <SmartLink href={person.website} className="link-accent">
+                    {person.website.replace(/^https?:\/\/(www\.)?/, "")}
+                  </SmartLink>
                 ) : null}
               </div>
             </details>

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { setFlash, temporaryPassword } from "@/lib/security";
 import { nextClientPublicId } from "@/lib/ids";
 import { ensureWallet, addCredits } from "@/lib/credits";
 
@@ -61,6 +62,7 @@ export async function POST(request: NextRequest) {
   }
 
   const publicId = await nextClientPublicId();
+  const issued: string[] = [];
 
   const household = await prisma.household.create({
     data: { name: householdName },
@@ -90,12 +92,14 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  const studentPassword = temporaryPassword();
   if (createClientLogin) {
+    issued.push(`${clientEmail}: ${studentPassword}`);
     await prisma.user.create({
       data: {
         email: clientEmail,
         name: `${firstName} ${lastName}`,
-        password: hashPassword("demo1234"),
+        password: hashPassword(studentPassword),
         role: "client",
         clientId: client.id,
         mustChangePassword: true,
@@ -118,11 +122,13 @@ export async function POST(request: NextRequest) {
     if (createGuardianLogin) {
       const existingUser = await prisma.user.findUnique({ where: { email: guardianEmail } });
       if (!existingUser) {
+        const guardianPassword = temporaryPassword();
+        issued.push(`${guardianEmail}: ${guardianPassword}`);
         await prisma.user.create({
           data: {
             email: guardianEmail,
             name: guardianName,
-            password: hashPassword("demo1234"),
+            password: hashPassword(guardianPassword),
             role: "guardian",
             mustChangePassword: true,
           },
@@ -169,5 +175,8 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  if (issued.length) {
+    await setFlash(`Temporary passwords (shown once, share them privately): ${issued.join(" · ")}. Each person picks their own password at first sign-in.`);
+  }
   return NextResponse.redirect(new URL(`/clients/${client.id}`, request.url), 303);
 }

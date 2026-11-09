@@ -41,9 +41,15 @@ Vercel's build tries `prisma db push` (it refuses changes that would delete data
 starts, `src/instrumentation.ts` runs the add-only statements in `src/lib/schema-upgrades.ts` over the
 normal connection. When you add a field to the schema, add its `ADD COLUMN IF NOT EXISTS` line there too.
 
+## Security
+
+See `docs/SECURITY.md` for what's protected, what changed, and the HIPAA steps only Coach Me 2 can take.
+
 ## Demo accounts
 
-Password for all demos: `demo1234`
+These only work while `DEMO_LOGINS=on` is set (keep it on Preview, off on the live site).
+
+Password for all demos: `demo1234`. New real accounts get their own one-time temporary password.
 
 | Role | Email |
 | --- | --- |

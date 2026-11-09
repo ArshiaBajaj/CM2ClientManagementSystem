@@ -6,7 +6,10 @@ import { ingestCoachStatus } from "@/lib/ingest-coach-status";
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("x-cm2-signature") ?? "";
-  const secret = process.env.COACH_STATUS_SECRET ?? "shared-dev-secret-change-in-production";
+  const secret = process.env.COACH_STATUS_SECRET;
+  if (!secret || secret.length < 16) {
+    return NextResponse.json({ error: "Coach status events are not configured" }, { status: 503 });
+  }
 
   if (!verifyPayload(body, signature, secret)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });

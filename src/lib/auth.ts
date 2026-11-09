@@ -15,14 +15,20 @@ export type SessionUser = {
 };
 
 function secret() {
-  return new TextEncoder().encode(process.env.AUTH_SECRET ?? "dev-client-secret-change-me-now");
+  const value = process.env.AUTH_SECRET;
+  // Never sign sessions with a guessable key on a real deployment.
+  if (!value || value.length < 32) {
+    if (process.env.NODE_ENV === "production") throw new Error("AUTH_SECRET must be set (32+ characters)");
+    return new TextEncoder().encode("local-development-only-secret-not-for-production");
+  }
+  return new TextEncoder().encode(value);
 }
 
 export async function createSession(user: SessionUser) {
   const token = await new SignJWT(user)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("12h")
+    .setExpirationTime("8h")
     .sign(secret());
 
   const jar = await cookies();
@@ -31,7 +37,7 @@ export async function createSession(user: SessionUser) {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 12,
+    maxAge: 60 * 60 * 8,
   });
 }
 

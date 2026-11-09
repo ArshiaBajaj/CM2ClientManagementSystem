@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { isCoachStatusType, type CoachStatusEvent } from "@/contracts/coach-status";
 import { hashPassword } from "@/lib/password";
+import { temporaryPassword } from "@/lib/security";
 
 export async function ingestCoachStatus(event: CoachStatusEvent) {
   if (!isCoachStatusType(event.eventType)) {
@@ -43,7 +44,8 @@ export async function ingestCoachStatus(event: CoachStatusEvent) {
       data: {
         email: event.email.toLowerCase(),
         name: event.name,
-        password: hashPassword("demo1234"),
+        // Unknown random password: a manager gives the coach a temporary one under Settings → Sign-in help.
+        password: hashPassword(temporaryPassword() + temporaryPassword()),
         role: "coach",
         coachId: event.coachId,
         mustChangePassword: true,

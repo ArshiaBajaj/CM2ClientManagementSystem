@@ -51,7 +51,7 @@ export default async function InternsAdminPage({
       </div>
       <Guide
         steps={[
-          { title: "Enroll", body: "Add the intern and a parent email. Each gets a login with the temporary password demo1234." },
+          { title: "Enroll", body: "Add the intern and a parent email. Each gets a login with their own temporary password, shown to you once." },
           { title: "They sign", body: "The intern signs their forms. The parent signs separately. You can see both badges here." },
           { title: "They collaborate", body: "Program chat and Documents let you read every team. A team's private channel is not visible to other teams." },
         ]}

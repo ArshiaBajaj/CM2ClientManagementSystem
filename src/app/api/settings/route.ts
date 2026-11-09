@@ -4,6 +4,8 @@ import { isLeadOrAdmin } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { PERMISSIONS, getProgramSettings } from "@/lib/settings";
 import { RELEASE_ANCHORS } from "@/lib/releases";
+import { hashPassword } from "@/lib/password";
+import { audit, setFlash, temporaryPassword } from "@/lib/security";
 
 function back(request: NextRequest, section: string, key: "notice" | "error", message: string) {
   return NextResponse.redirect(
@@ -28,6 +30,22 @@ export async function POST(request: NextRequest) {
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "program").trim();
   const on = (name: string) => String(form.get(name) ?? "") === "1";
+
+  if (intent === "temp_password") {
+    const email = String(form.get("email") ?? "").trim().toLowerCase();
+    const target = await prisma.user.findUnique({ where: { email } });
+    if (!target) return back(request, "signin", "error", "No account uses that email");
+    // Managers can't reset another manager or admin from here.
+    if ((target.role === "admin" || target.role === "team_lead") && target.id !== user.id && user.role !== "admin") {
+      return back(request, "signin", "error", "Only an admin can reset a manager's password");
+    }
+    const temp = temporaryPassword();
+    await prisma.user.update({ where: { id: target.id }, data: { password: hashPassword(temp), mustChangePassword: true } });
+    await prisma.auditEvent.deleteMany({ where: { action: "LoginFailed", entityId: email } });
+    await audit("TemporaryPasswordIssued", "User", target.id, user.id);
+    await setFlash(`Temporary password for ${email} (shown once, share it privately): ${temp}. They pick their own at sign-in.`);
+    return back(request, "signin", "notice", "Temporary password created");
+  }
 
   if (intent === "appointment_type") {
     const id = String(form.get("id") ?? "").trim();
