@@ -2,7 +2,9 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { siteAsset } from "@/lib/site-assets";
 import { CheckInQuiz } from "@/components/site/check-in-quiz";
-import { CtaBand, Meridians, Section } from "@/components/site/ui";
+import { CtaBand, Section } from "@/components/site/ui";
+import { WorldGlobe } from "@/components/world-globe";
+import { countryCounts } from "@/lib/world";
 import { UpdateCards } from "@/components/site/updates";
 import {
   APP_FEATURES,
@@ -42,27 +44,37 @@ const DOORS = [
 ];
 
 export default async function HomePage() {
-  const updates = await prisma.programUpdate.findMany({
-    where: { published: true },
-    orderBy: { publishedAt: "desc" },
-    take: 3,
-  });
+  const [updates, counts] = await Promise.all([
+    prisma.programUpdate.findMany({ where: { published: true }, orderBy: { publishedAt: "desc" }, take: 3 }),
+    countryCounts(),
+  ]);
+  const faces = COACHES.filter((c) => c.photo).slice(0, 6);
 
   return (
     <>
       {/* Hero */}
-      <section className="border-b border-ink/10">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-20 pt-16 sm:pt-24 lg:grid-cols-[1.2fr_0.8fr]">
-          <div>
-            <p className="eyebrow">Coaching for teens 14–19</p>
-            <h1 className="mt-6 font-display text-6xl leading-[0.98] sm:text-8xl">
-              Everyone deserves <em className="text-accent-deep">a coach.</em>
+      <section className="relative overflow-hidden border-b border-ink/10">
+        <div className="mx-auto grid max-w-6xl items-center gap-6 px-6 pb-16 pt-14 sm:pt-20 lg:min-h-[44rem] lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="relative z-10">
+            <p className="eyebrow hero-rise" style={{ animationDelay: "0ms" }}>
+              Coaching for teens 14–19
+            </p>
+            <h1 className="mt-6 font-display text-[3.6rem] leading-[0.95] sm:text-8xl lg:text-[7.25rem]">
+              <span className="hero-rise block" style={{ animationDelay: "80ms" }}>
+                Everyone
+              </span>
+              <span className="hero-rise block" style={{ animationDelay: "180ms" }}>
+                deserves
+              </span>
+              <em className="hero-rise block text-accent-deep" style={{ animationDelay: "300ms" }}>
+                a coach.
+              </em>
             </h1>
-            <p className="mt-8 max-w-xl text-xl leading-relaxed text-ink/75">
+            <p className="hero-rise mt-8 max-w-lg text-xl leading-relaxed text-ink/75" style={{ animationDelay: "420ms" }}>
               Frictionless. Affordable. You call the shots — a dedicated coach walks with you from where you are to where
               you want to be.
             </p>
-            <div className="mt-10 flex flex-wrap items-center gap-3">
+            <div className="hero-rise mt-10 flex flex-wrap items-center gap-3" style={{ animationDelay: "520ms" }}>
               <Link href="/scheduling" className="btn px-7 text-base">
                 Get a coach
               </Link>
@@ -70,13 +82,46 @@ export default async function HomePage() {
                 How coaching works
               </Link>
             </div>
+            <Link
+              href="/meet-our-coaches"
+              className="hero-rise group mt-10 inline-flex items-center gap-4"
+              style={{ animationDelay: "620ms" }}
+            >
+              <span className="flex -space-x-3" aria-hidden>
+                {faces.map((c) => (
+                  <img
+                    key={c.name}
+                    src={siteAsset(c.photo) ?? ""}
+                    alt=""
+                    className="h-11 w-11 rounded-full border-2 border-paper bg-mist object-cover"
+                  />
+                ))}
+              </span>
+              <span className="text-sm leading-snug text-ink/75">
+                <span className="font-semibold text-ink">{COACHES.length} credentialed coaches</span>
+                <br />
+                <span className="group-hover:underline">ready when you are →</span>
+              </span>
+            </Link>
           </div>
-          <Link href="/world-view" className="group relative mx-auto block w-full max-w-sm text-ink">
-            <Meridians className="w-full transition duration-700 group-hover:rotate-[8deg]" />
-            <span className="mt-4 block text-center text-sm text-ink/70">
-              Teens around the world · <span className="font-display text-lg italic text-ink">explore World View</span>
-            </span>
-          </Link>
+
+          {/* The live World View globe: countries with Coach Me 2 teens light up. */}
+          <figure className="hero-rise relative mx-auto w-full max-w-[34rem] lg:-mr-24 lg:max-w-none" style={{ animationDelay: "250ms" }}>
+            {/* Two fine orbit rings around the globe */}
+            <div className="absolute -inset-[3%] rounded-full border border-ink/10" aria-hidden />
+            <div className="absolute -inset-[7%] rounded-full border border-dashed border-ink/10" aria-hidden />
+            <div className="relative">
+              <WorldGlobe
+                highlight={counts.map((c) => c.country)}
+                label={`World View globe${counts.length ? ` showing ${counts.length} countries with Coach Me 2 teens` : ""}.`}
+              />
+            </div>
+            <figcaption className="mt-2 text-center text-sm text-ink/70">
+              <Link href="/world-view" className="hover:underline">
+                Teens around the world · <span className="font-display text-lg italic text-ink">explore World View</span>
+              </Link>
+            </figcaption>
+          </figure>
         </div>
       </section>
 

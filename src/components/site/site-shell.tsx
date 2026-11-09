@@ -38,7 +38,7 @@ export async function SiteShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-ink/10 bg-paper/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
           <Link href="/" className="shrink-0" aria-label="CoachMe2.world home">
-            <img src="/brand/coachme2-logo.png" alt="" width={1024} height={221} className="h-8 w-auto" />
+            <img src="/brand/coachme2-logo.png" alt="" width={1024} height={221} className="h-7 w-auto sm:h-8" />
           </Link>
 
           <nav aria-label="Main" className="hidden items-center gap-8 lg:flex">
@@ -50,11 +50,11 @@ export async function SiteShell({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-2">
-            <Link href="/scheduling" className="btn">
+            <Link href="/scheduling" className="btn whitespace-nowrap px-4 sm:px-5">
               Get a coach
             </Link>
             <details className="relative lg:hidden">
-              <summary className="btn-secondary cursor-pointer list-none [&::-webkit-details-marker]:hidden">Menu</summary>
+              <summary className="btn-secondary cursor-pointer list-none px-4 [&::-webkit-details-marker]:hidden">Menu</summary>
               <div className="panel absolute right-0 top-full z-50 mt-2 w-[min(86vw,20rem)] rounded-2xl p-3 shadow-soft">
                 <ul>
                   {PRIMARY_NAV.map((item) => (
