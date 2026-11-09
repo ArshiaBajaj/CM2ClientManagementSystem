@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { notifyUsers } from "@/lib/push";
-import { setFlash, temporaryPassword } from "@/lib/security";
+import { audit, setFlash, temporaryPassword } from "@/lib/security";
 import { hashPassword } from "@/lib/password";
 import { nextInternPublicId } from "@/lib/ids";
 import { answersFromForm, ensureProgramChannels, ensureTeamChannel, internClearance, internRecord } from "@/lib/gate";
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
   if (intent === "sign") return sign(request, user, form);
   if (intent === "message") return message(request, user, form);
   if (intent === "direct") return startDirect(request, user, form);
+  if (intent === "on-file") return formsOnFile(request, user, form);
   if (intent === "document") return shareDocument(request, user, form);
   if (intent === "task") return createTask(request, user, form);
   if (intent === "task-status") return moveTask(request, user, form);
@@ -269,6 +270,46 @@ async function message(request: NextRequest, user: NonNullable<Awaited<ReturnTyp
   url.searchParams.set("channel", channel.key);
   url.searchParams.set("notice", "Message sent");
   return NextResponse.redirect(url, 303);
+}
+
+/**
+ * For interns whose forms were already signed this year outside the portal (paper or another system):
+ * a manager records them as on file, which opens the intern workspace without signing again.
+ * Each record notes who marked it and when, for the audit trail.
+ */
+async function formsOnFile(request: NextRequest, user: NonNullable<Awaited<ReturnType<typeof getSession>>>, form: FormData) {
+  if (!isLeadOrAdmin(user)) return go(request, "/intern", "error", "Only program managers can do that");
+  const all = String(form.get("internId") ?? "") === "all";
+  const interns = await prisma.intern.findMany({ where: all ? {} : { id: String(form.get("internId") ?? "") } });
+  if (interns.length === 0) return go(request, "/interns", "error", "Intern not found");
+  const packets = await prisma.accessPacket.findMany({
+    where: { active: true, audience: { in: ["intern", "intern_parent"] } },
+  });
+  for (const intern of interns) {
+    for (const packet of packets) {
+      await prisma.accessCompletion.upsert({
+        where: { packetId_subjectKey_signerRole: { packetId: packet.id, subjectKey: intern.id, signerRole: packet.audience } },
+        update: {},
+        create: {
+          packetId: packet.id,
+          subjectKey: intern.id,
+          signerRole: packet.audience,
+          signerName: `On file (signed outside the portal), recorded by ${user.name}`,
+          signerUserId: user.id,
+          version: packet.version,
+          answersJson: JSON.stringify({ onFile: true }),
+        },
+      });
+    }
+    await refreshInternStatus(intern.id);
+    await audit("InternFormsOnFile", "Intern", intern.id, user.id);
+  }
+  return go(
+    request,
+    "/interns",
+    "notice",
+    all ? `Forms marked on file for all ${interns.length} interns. Their workspaces are open.` : `${interns[0].firstName}'s forms are on file. Their workspace is open.`,
+  );
 }
 
 /** Opens (or creates) a one-on-one conversation between two cleared interns. */

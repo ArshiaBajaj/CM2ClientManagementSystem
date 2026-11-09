@@ -64,6 +64,9 @@ export default async function ClientsPage({
           ) : null}
           {isLeadOrAdmin(user) ? (
             <>
+              <Link href="/clients/import" className="rounded-full border border-ink/15 px-4 py-2 text-sm">
+                Import from spreadsheet
+              </Link>
               <Link
                 href="/clients/new"
                 className="rounded-full border border-ink/15 px-4 py-2 text-sm"

@@ -79,7 +79,16 @@ export default async function InternsAdminPage({
 
       <section className="mt-10">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Interns</h2>
-        <p className="mt-1 text-sm text-ink/55">Both badges must say signed. Parents can check status. They do not see team chat.</p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-ink/55">Both badges must say signed. Parents can check status. They do not see team chat.</p>
+          {interns.some((i) => !i.internDone || !i.parentDone) ? (
+            <form action="/api/interns" method="post">
+              <input type="hidden" name="intent" value="on-file" />
+              <input type="hidden" name="internId" value="all" />
+              <button className="btn-secondary px-4 text-sm">All forms already on file</button>
+            </form>
+          ) : null}
+        </div>
         <ul className="mt-3 divide-y divide-ink/10 rounded-xl border border-ink/10 bg-white">
           {interns.length === 0 ? <li className="p-4 text-sm text-ink/55">No interns yet.</li> : null}
           {interns.map((intern) => (
@@ -100,6 +109,13 @@ export default async function InternsAdminPage({
                 <span className={`rounded-full px-2.5 py-0.5 ${intern.parentDone ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
                   Parent {intern.parentDone ? "signed" : "pending"}
                 </span>
+                {!intern.internDone || !intern.parentDone ? (
+                  <form action="/api/interns" method="post">
+                    <input type="hidden" name="intent" value="on-file" />
+                    <input type="hidden" name="internId" value={intern.id} />
+                    <button className="rounded-full border border-ink/20 px-2.5 py-0.5 hover:border-ink/40">Forms on file</button>
+                  </form>
+                ) : null}
               </div>
             </li>
           ))}

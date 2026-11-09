@@ -102,6 +102,8 @@ sidebar flips between Coach Me 2 clients, their own clients, or everyone. Privat
 | Area | Route |
 | --- | --- |
 | Request a coach (public form) | `/get-a-coach` |
+| Import clients from a spreadsheet (e.g. a Healthie export) | `/clients/import` |
+| Interns whose forms were signed outside the portal: "Forms on file" | `/interns` |
 | World View: opt-in, parent consent, coach-moderated cross-border circles | `/world` |
 | Privacy and accessibility | `/privacy`, `/accessibility` |
 | Coach's own private clients | `/clients/private/new`, sidebar caseload switcher |
