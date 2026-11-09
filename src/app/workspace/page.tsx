@@ -92,7 +92,7 @@ async function StaffHome({ user }: { user: SessionUser }) {
   const apptScope = await appointmentScope(user, coachId);
   const weekAhead = new Date(Date.now() + 7 * 86_400_000);
 
-  const [clients, sessions, reportRequests, newRequests, newInquiries, overdue] = await Promise.all([
+  const [clients, sessions, reportRequests, newRequests, overdue] = await Promise.all([
     prisma.client.findMany({
       where: { archivedAt: null, ...scope },
       include: { assignments: { where: { status: "active" }, include: { coach: true } }, goals: { where: { status: "active" } } },
@@ -113,7 +113,6 @@ async function StaffHome({ user }: { user: SessionUser }) {
       include: { client: true },
     }),
     manager ? prisma.coachRequest.count({ where: { status: "new" } }) : Promise.resolve(0),
-    manager ? prisma.siteInquiry.count({ where: { status: "new", kind: { not: "newsletter" } } }) : Promise.resolve(0),
     prisma.appointment.count({
       where: { status: "scheduled", endsAt: { lt: new Date() }, ...apptScope },
     }),
@@ -129,7 +128,6 @@ async function StaffHome({ user }: { user: SessionUser }) {
   }
   if (overdue > 0) todo.push({ label: `${overdue} past session${overdue === 1 ? "" : "s"} to mark complete or no-show`, href: "/calendar?tab=upcoming" });
   if (manager && newRequests > 0) todo.push({ label: `${newRequests} new coach request${newRequests === 1 ? "" : "s"} from the website`, href: "/matching" });
-  if (manager && newInquiries > 0) todo.push({ label: `${newInquiries} new message${newInquiries === 1 ? "" : "s"} in the website inbox`, href: "/inbox" });
   if (manager && unmatched > 0) todo.push({ label: `${unmatched} student${unmatched === 1 ? "" : "s"} waiting for a coach`, href: "/matching" });
   if (unsigned > 0) todo.push({ label: `${unsigned} student${unsigned === 1 ? " has" : "s have"} unsigned documents`, href: manager ? "/documents" : "/clients" });
   if (manager) {

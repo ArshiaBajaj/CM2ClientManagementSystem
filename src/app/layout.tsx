@@ -16,10 +16,10 @@ const sans = Instrument_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "CoachMe2.world | Everyone deserves a coach",
-    template: "%s | CoachMe2.world",
+    default: "Coach Me 2 | Client portal",
+    template: "%s | Coach Me 2",
   },
-  description: "Affordable, nonjudgmental coaching for teens 14–19. Get from where you are to where you want to be.",
+  description: "The Coach Me 2 client management system for students, families, coaches, interns, and program leads.",
   // On iPhone, "Add to Home Screen" opens the portal full-screen like an app, which also enables notifications.
   appleWebApp: { capable: true, title: "Coach Me 2", statusBarStyle: "default" },
   icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },

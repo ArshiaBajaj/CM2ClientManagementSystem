@@ -453,21 +453,6 @@ model CoachRequest {
   createdAt      DateTime @default(now())
 }
 
-/// Messages from the public website: contact form, intern applications, partnership notes, quiz sign-ups.
-model SiteInquiry {
-  id        String   @id @default(cuid())
-  kind      String
-  name      String   @default("")
-  email     String
-  topic     String   @default("")
-  message   String   @default("")
-  detailsJson String @default("{}")
-  status    String   @default("new")
-  createdAt DateTime @default(now())
-
-  @@index([status, createdAt])
-}
-
 /// A phone or browser that asked for Coach Me 2 notifications (these also show on a paired Apple Watch).
 model PushSubscription {
   id        String   @id @default(cuid())

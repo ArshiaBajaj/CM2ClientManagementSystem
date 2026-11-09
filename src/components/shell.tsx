@@ -31,7 +31,6 @@ const MANAGER_LINKS: NavItem[] = [
   { href: "/credits", label: "Credits" },
   { href: "/documents", label: "Documents" },
   { href: "/interns", label: "Interns" },
-  { href: "/inbox", label: "Website inbox" },
   { href: "/updates", label: "Website updates" },
   { href: "/settings", label: "Settings" },
 ];
@@ -168,13 +167,11 @@ export async function Shell({
 
   const settings = await getProgramSettings();
   const flash = user ? await readFlash() : null;
-  // The public site now lives in this app, so these open its pages.
   const programLinks = [
-    { href: "/", label: "CoachMe2.world" },
-    { href: "/hub", label: "The hub" },
-    { href: settings.podcastUrl || "/podcast", label: "Podcast" },
-    { href: settings.researchUrl || "/research", label: "Research" },
-  ];
+    { href: settings.websiteUrl, label: "CoachMe2.world" },
+    { href: settings.podcastUrl, label: "Podcast" },
+    { href: settings.researchUrl, label: "Research" },
+  ].filter((link) => link.href);
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[232px_1fr]">

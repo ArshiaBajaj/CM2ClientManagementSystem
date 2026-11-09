@@ -10,8 +10,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts && tsx prisma/cm2-content.ts",
     "db:content": "tsx prisma/cm2-content.ts",
-    "postinstall": "prisma generate",
-    "site:assets": "node scripts/pull-site-assets.mjs"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.16.1",

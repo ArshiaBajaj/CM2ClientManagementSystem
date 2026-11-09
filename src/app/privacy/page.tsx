@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { PageHero, Section } from "@/components/site/ui";
-import { LINKS } from "@/content/site";
+import { PublicShell } from "@/components/public-shell";
+const CONTACT_EMAIL = "rebecca@coachme2.world";
 
 export const metadata: Metadata = { title: "Privacy" };
 
@@ -24,7 +24,7 @@ const POINTS = [
   },
   {
     title: "World View",
-    body: "The World View map shows countries, never cities or addresses. Teens join cross-border circles only with a parent’s permission, and every circle is moderated by a Coach Me 2 coach.",
+    body: "World View shows countries, never cities or addresses. Teens join cross-border circles only with a parent’s permission, and every circle is moderated by a Coach Me 2 coach.",
   },
   {
     title: "We don’t sell data",
@@ -32,17 +32,18 @@ const POINTS = [
   },
   {
     title: "Your choices",
-    body: `Ask to see, correct, or delete your information by emailing ${LINKS.email}. A parent or guardian can make requests for a teen under 18.`,
+    body: `Ask to see, correct, or delete your information by emailing ${CONTACT_EMAIL}. A parent or guardian can make requests for a teen under 18.`,
   },
 ];
 
 export default function PrivacyPage() {
   return (
-    <>
-      <PageHero eyebrow="Privacy" title="How we handle your information.">
-        <p>Plain language first. If anything here is unclear, write to us and we’ll explain.</p>
-      </PageHero>
-      <Section>
+    <PublicShell>
+      <div className="mx-auto max-w-3xl px-6 py-14">
+      <p className="label-caps text-accent">Privacy</p>
+        <h1 className="mt-3 font-display text-5xl leading-tight">How we handle your information.</h1>
+        <p className="mt-4 max-w-2xl text-lg text-ink/75">Plain language first. If anything here is unclear, write to us and we’ll explain.</p>
+      <div className="mt-10">
         <dl className="max-w-3xl divide-y divide-ink/10">
           {POINTS.map((p) => (
             <div key={p.title} className="py-7">
@@ -51,7 +52,8 @@ export default function PrivacyPage() {
             </div>
           ))}
         </dl>
-      </Section>
-    </>
+      </div>
+      </div>
+    </PublicShell>
   );
 }

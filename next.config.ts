@@ -2,17 +2,16 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 const dev = process.env.NODE_ENV !== "production";
-const assetOrigin = process.env.SITE_ASSET_ORIGIN || "https://coachme2-world.vercel.app";
 
 /** Browser-side protections for every page. */
 const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${assetOrigin}`,
+  "img-src 'self' data: blob:",
   "font-src 'self' data:",
   "connect-src 'self'",
-  "frame-src https://www.zeffy.com",
+  "frame-src 'none'",
   "worker-src 'self'",
   "manifest-src 'self'",
   "object-src 'none'",
@@ -28,7 +27,7 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(self \"https://www.zeffy.com\")" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
@@ -41,7 +40,7 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // Signed-in pages hold private information: never cache them in shared caches.
       {
-        source: "/(workspace|clients|chat|calendar|journal|goals|forms|metrics|values|portfolio|documents|credits|matching|settings|inbox|intern|interns|onboarding|account|availability|updates)/:path*",
+        source: "/(workspace|clients|chat|calendar|journal|goals|forms|metrics|values|portfolio|documents|credits|matching|settings|intern|interns|onboarding|account|availability|updates)/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
     ];

@@ -5,7 +5,7 @@ import { notifyUsers } from "@/lib/push";
 /**
  * Morning reminders, run once a day by Vercel Cron (see vercel.json):
  * students get today's session time or a nudge to check in on their goals, coaches get their session count,
- * managers get new coach requests and website messages.
+ * managers get new coach requests.
  */
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -76,20 +76,13 @@ export async function GET(request: NextRequest) {
     sent.coaches += coaches.length;
   }
 
-  // Managers: anything waiting from the website.
-  const [requests, inquiries] = await Promise.all([
-    prisma.coachRequest.count({ where: { status: "new" } }),
-    prisma.siteInquiry.count({ where: { status: "new", kind: { not: "newsletter" } } }),
-  ]);
-  if (requests + inquiries > 0) {
+  // Managers: new coach requests waiting for a match.
+  const requests = await prisma.coachRequest.count({ where: { status: "new" } });
+  if (requests > 0) {
     const managers = await prisma.user.findMany({ where: { role: { in: ["team_lead", "admin"] } }, select: { id: true } });
-    const parts = [
-      requests ? `${requests} coach request${requests === 1 ? "" : "s"}` : "",
-      inquiries ? `${inquiries} website message${inquiries === 1 ? "" : "s"}` : "",
-    ].filter(Boolean);
     await notifyUsers(
       managers.map((u) => u.id),
-      { title: "Waiting for you", body: `${parts.join(" and ")}.`, url: "/workspace", tag: "daily" },
+      { title: "Waiting for you", body: `${requests} new coach request${requests === 1 ? "" : "s"}.`, url: "/matching", tag: "daily" },
     );
     sent.managers += managers.length;
   }

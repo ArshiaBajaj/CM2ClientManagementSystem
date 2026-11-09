@@ -1,9 +1,9 @@
-# Coach Me 2: CoachMe2.world + client management
+# Coach Me 2 Client Management
 
-One app for the public CoachMe2.world website and the Coach Me 2 back office (coaches, managers,
-students, parents, interns). The website pages live in `src/app/(site)` and read their text,
-people, and links from `src/content/site.ts`. Coaches are accepted only after a signed status
-event from the onboarding app.
+The Coach Me 2 client management system: one portal for students, parents, coaches (including
+coach onboarding), interns (the intern workspace), and program leads. It stands alone: the public
+CoachMe2.world website is a separate project. Opening the app goes straight to sign in. Coaches
+are accepted only after a signed status event from the onboarding app.
 
 - Local URL: http://localhost:3000
 - Coach onboarding: http://localhost:3001
@@ -16,10 +16,6 @@ npm run db:seed      # demo users + CM2 program content
 npm run dev
 ```
 
-`npm run site:assets` copies the website's photos and illustrations from the old
-coachme2-world.vercel.app site into `public/site` (run it once on a computer with internet access,
-then commit the files). Until then, pages load those images from the old site.
-
 `npm run db:content` adds the CM2 program content (appointment types, forms, automatic form
 rules, documents) to an existing database without touching anything already there.
 
@@ -31,8 +27,8 @@ Optional environment variables:
 | `ANTHROPIC_MODEL` | Claude model (default `claude-sonnet-4-5`) |
 | `ONBOARDING_APP_URL` | "Become a coach" link on the public home page |
 | `COACH_STATUS_SECRET` | Shared secret for signed coach status events from onboarding |
-| `DEMO_LOGINS` | Set to `on` to pre-fill the manager login and list demo accounts on /login. Leave unset on the live site. |
-| `SITE_ASSET_ORIGIN` | Where website images load from until `npm run site:assets` has copied them |
+| `DEMO_LOGINS` | Set to `on` to turn on the seeded demo accounts and list them on /login. Leave unset once real families use it. |
+| `CRON_SECRET` | Locks the daily reminder job to Vercel's scheduler |
 
 ## Deploying
 
@@ -105,10 +101,9 @@ sidebar flips between Coach Me 2 clients, their own clients, or everyone. Privat
 
 | Area | Route |
 | --- | --- |
-| Public website (home, about, teens, parents, partners, programs, coaches, board, interns, resources, podcast, research, donate, contact, get involved) | `/`, `/about`, `/teens`, … (see `src/app/(site)`) |
-| Get a coach (discovery call, request form, sign in) | `/scheduling`, `/get-a-coach` |
-| Coach Me 2 hub: everything in one place | `/hub` |
-| Website inbox: contact form, intern applications, quiz sign-ups | `/inbox` |
+| Request a coach (public form) | `/get-a-coach` |
+| World View: opt-in, parent consent, coach-moderated cross-border circles | `/world` |
+| Privacy and accessibility | `/privacy`, `/accessibility` |
 | Coach's own private clients | `/clients/private/new`, sidebar caseload switcher |
 | Public JSON feed for the website (links, podcast, research) | `/api/public/updates` |
 | Home (role dashboards with to-dos) | `/workspace` |

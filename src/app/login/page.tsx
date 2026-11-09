@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { homeFor } from "@/lib/gate";
-import { SiteShell } from "@/components/site/site-shell";
+import { PublicShell } from "@/components/public-shell";
 
 export default async function LoginPage({
   searchParams,
@@ -16,7 +16,7 @@ export default async function LoginPage({
   const demo = process.env.DEMO_LOGINS === "on";
 
   return (
-    <SiteShell>
+    <PublicShell>
       <div className="mx-auto grid max-w-5xl gap-10 px-6 py-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div className="stagger">
           <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
@@ -80,14 +80,14 @@ export default async function LoginPage({
           ) : (
             <p className="mt-6 border-t border-ink/10 pt-4 text-sm text-ink/60">
               New here?{" "}
-              <a href="/scheduling" className="link-accent">
-                Get a coach
+              <a href="/get-a-coach" className="link-accent">
+                Request a coach
               </a>{" "}
               first. Your program lead sets up your account.
             </p>
           )}
         </div>
       </div>
-    </SiteShell>
+    </PublicShell>
   );
 }

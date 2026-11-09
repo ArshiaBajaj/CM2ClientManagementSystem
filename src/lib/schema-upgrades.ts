@@ -11,20 +11,6 @@ const STATEMENTS = [
   // Coaches' private clients
   `ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "program" TEXT NOT NULL DEFAULT 'cm2'`,
   `ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "ownerCoachId" TEXT`,
-  // Website inbox
-  `CREATE TABLE IF NOT EXISTS "SiteInquiry" (
-    "id" TEXT NOT NULL,
-    "kind" TEXT NOT NULL,
-    "name" TEXT NOT NULL DEFAULT '',
-    "email" TEXT NOT NULL,
-    "topic" TEXT NOT NULL DEFAULT '',
-    "message" TEXT NOT NULL DEFAULT '',
-    "detailsJson" TEXT NOT NULL DEFAULT '{}',
-    "status" TEXT NOT NULL DEFAULT 'new',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "SiteInquiry_pkey" PRIMARY KEY ("id")
-  )`,
-  `CREATE INDEX IF NOT EXISTS "SiteInquiry_status_createdAt_idx" ON "SiteInquiry"("status", "createdAt")`,
   // Intern direct messages
   `ALTER TABLE "InternChannel" ADD COLUMN IF NOT EXISTS "memberIds" TEXT NOT NULL DEFAULT ''`,
   // Calendar feed
