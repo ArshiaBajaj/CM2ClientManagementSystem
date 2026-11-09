@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
   const intent = String(form.get("intent") ?? "");
 
   if (intent === "enroll") return enroll(request, user, form);
+  if (intent === "enroll-many") return enrollMany(request, user, form);
   if (intent === "team") return createTeam(request, user, form);
   if (intent === "packet") return editPacket(request, user, form);
   if (intent === "sign") return sign(request, user, form);
@@ -44,84 +45,136 @@ export async function POST(request: NextRequest) {
   return go(request, "/interns", "error", "Unknown action");
 }
 
-async function enroll(request: NextRequest, user: NonNullable<Awaited<ReturnType<typeof getSession>>>, form: FormData) {
-  if (!isLeadOrAdmin(user)) return go(request, "/interns/new", "error", "Managers only");
-  const firstName = String(form.get("firstName") ?? "").trim();
-  const lastName = String(form.get("lastName") ?? "").trim();
-  const email = String(form.get("email") ?? "").toLowerCase().trim();
-  const parentName = String(form.get("parentName") ?? "").trim();
-  const parentEmail = String(form.get("parentEmail") ?? "").toLowerCase().trim();
-  const parentPhone = String(form.get("parentPhone") ?? "").trim();
-  const teamId = String(form.get("teamId") ?? "").trim();
-  const newTeam = String(form.get("newTeam") ?? "").trim();
-  const newFocus = String(form.get("newFocus") ?? "").trim();
+type Session = NonNullable<Awaited<ReturnType<typeof getSession>>>;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  if (!firstName || !lastName || !email || !parentName || !parentEmail) {
-    return go(request, "/interns/new", "error", "Intern name, email, and parent name and email are required");
+/** This year's intern and parent forms were signed on paper, so new interns start with them on file. */
+async function recordFormsOnFile(internId: string, user: Session) {
+  const packets = await prisma.accessPacket.findMany({
+    where: { active: true, audience: { in: ["intern", "intern_parent"] } },
+  });
+  for (const packet of packets) {
+    await prisma.accessCompletion.upsert({
+      where: { packetId_subjectKey_signerRole: { packetId: packet.id, subjectKey: internId, signerRole: packet.audience } },
+      update: {},
+      create: {
+        packetId: packet.id,
+        subjectKey: internId,
+        signerRole: packet.audience,
+        signerName: `On file (signed outside the portal), recorded by ${user.name}`,
+        signerUserId: user.id,
+        version: packet.version,
+        answersJson: JSON.stringify({ onFile: true }),
+      },
+    });
   }
-  if (email === parentEmail) return go(request, "/interns/new", "error", "Intern and parent need different emails");
-  if (!teamId && !newTeam) return go(request, "/interns/new", "error", "Choose a team or name a new one");
-  if (await prisma.user.findUnique({ where: { email } })) {
-    return go(request, "/interns/new", "error", "That intern email already has a login");
-  }
-  const parentUser = await prisma.user.findUnique({ where: { email: parentEmail } });
-  if (parentUser && parentUser.role !== "intern_parent") {
-    return go(request, "/interns/new", "error", "That parent email is already used by another role");
-  }
+  await refreshInternStatus(internId);
+}
 
-  await ensureProgramChannels();
-  const team = newTeam
-    ? await prisma.internTeam.create({ data: { name: newTeam, focus: newFocus } })
-    : await prisma.internTeam.findUnique({ where: { id: teamId } });
-  if (!team) return go(request, "/interns/new", "error", "Team not found");
-  await ensureTeamChannel(team.id, team.name);
-
+/** Creates one intern with a login and their forms already on file. Returns their temporary password, or why not. */
+async function addIntern(
+  user: Session,
+  teamId: string,
+  data: { firstName: string; lastName: string; email: string; parentName?: string; parentEmail?: string; parentPhone?: string },
+): Promise<{ temp: string } | { error: string }> {
+  const email = data.email.toLowerCase().trim();
+  if (!data.firstName || !EMAIL.test(email)) return { error: "needs a name and a valid email" };
+  if (await prisma.user.findUnique({ where: { email } })) return { error: "that email already has a login" };
   const intern = await prisma.intern.create({
     data: {
       publicId: await nextInternPublicId(),
-      firstName,
-      lastName,
+      firstName: data.firstName,
+      lastName: data.lastName,
       email,
-      teamId: team.id,
-      parentName,
-      parentEmail,
-      parentPhone: parentPhone || null,
+      teamId,
+      parentName: data.parentName ?? "",
+      parentEmail: (data.parentEmail ?? "").toLowerCase(),
+      parentPhone: data.parentPhone || null,
       status: "pending",
     },
   });
-  const internTemp = temporaryPassword();
-  const parentTemp = temporaryPassword();
+  const temp = temporaryPassword();
   await prisma.user.create({
     data: {
       email,
-      name: `${firstName} ${lastName}`,
-      password: hashPassword(internTemp),
+      name: `${data.firstName} ${data.lastName}`.trim(),
+      password: hashPassword(temp),
       role: "intern",
       internId: intern.id,
       mustChangePassword: true,
     },
   });
-  if (!parentUser) {
-    await prisma.user.create({
-      data: {
-        email: parentEmail,
-        name: parentName,
-        password: hashPassword(parentTemp),
-        role: "intern_parent",
-        mustChangePassword: true,
-      },
-    });
-  }
+  await recordFormsOnFile(intern.id, user);
+  await audit("InternEnrolled", "Intern", intern.id, user.id);
+  return { temp };
+}
 
-  await setFlash(
-    `Temporary passwords (shown once, share them privately): ${email}: ${internTemp}${parentUser ? "" : ` · ${parentEmail}: ${parentTemp}`}.`,
-  );
-  return go(
-    request,
-    "/interns",
-    "notice",
-    `${firstName} ${lastName} enrolled on ${team.name}. Their temporary passwords are shown above.`,
-  );
+async function pickTeam(form: FormData) {
+  const teamId = String(form.get("teamId") ?? "").trim();
+  const newTeam = String(form.get("newTeam") ?? "").trim();
+  const newFocus = String(form.get("newFocus") ?? "").trim();
+  await ensureProgramChannels();
+  const team = newTeam
+    ? await prisma.internTeam.create({ data: { name: newTeam, focus: newFocus } })
+    : teamId
+      ? await prisma.internTeam.findUnique({ where: { id: teamId } })
+      : null;
+  if (team) await ensureTeamChannel(team.id, team.name);
+  return team;
+}
+
+async function enroll(request: NextRequest, user: Session, form: FormData) {
+  if (!isLeadOrAdmin(user)) return go(request, "/interns/new", "error", "Managers only");
+  const firstName = String(form.get("firstName") ?? "").trim();
+  const lastName = String(form.get("lastName") ?? "").trim();
+  const email = String(form.get("email") ?? "").toLowerCase().trim();
+  if (!firstName || !email) return go(request, "/interns/new", "error", "Add the intern's name and email");
+  const team = await pickTeam(form);
+  if (!team) return go(request, "/interns/new", "error", "Choose a team or type a new team name");
+
+  const result = await addIntern(user, team.id, {
+    firstName,
+    lastName,
+    email,
+    parentName: String(form.get("parentName") ?? "").trim(),
+    parentEmail: String(form.get("parentEmail") ?? "").trim(),
+    parentPhone: String(form.get("parentPhone") ?? "").trim(),
+  });
+  if ("error" in result) return go(request, "/interns/new", "error", `Couldn't add ${firstName}: ${result.error}`);
+  await setFlash(`${email} · temporary password ${result.temp} (shown once).`);
+  return go(request, "/interns", "notice", `${firstName} ${lastName} is on ${team.name} and their workspace is open.`);
+}
+
+/** Many interns at once: one per line, "Name, email". */
+async function enrollMany(request: NextRequest, user: Session, form: FormData) {
+  if (!isLeadOrAdmin(user)) return go(request, "/interns/new", "error", "Managers only");
+  const lines = String(form.get("list") ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return go(request, "/interns/new", "error", "Paste at least one line: Name, email");
+  if (lines.length > 200) return go(request, "/interns/new", "error", "Add up to 200 interns at a time");
+  const team = await pickTeam(form);
+  if (!team) return go(request, "/interns/new", "error", "Choose a team or type a new team name");
+
+  const added: string[] = [];
+  const skipped: string[] = [];
+  for (const line of lines) {
+    const parts = line.split(/[,\t;]/).map((p) => p.trim()).filter(Boolean);
+    const email = parts.find((p) => EMAIL.test(p)) ?? "";
+    const name = parts.filter((p) => p !== email).join(" ").trim() || email.split("@")[0];
+    const [firstName, ...rest] = name.split(/\s+/);
+    const result = await addIntern(user, team.id, { firstName: firstName ?? "", lastName: rest.join(" "), email });
+    if ("error" in result) skipped.push(`${line} (${result.error})`);
+    else added.push(`${email} · ${result.temp}`);
+  }
+  if (added.length) {
+    await setFlash(`Temporary passwords (shown once): ${added.join(" | ")}`);
+  }
+  const summary = `Added ${added.length} intern${added.length === 1 ? "" : "s"} to ${team.name}.${
+    skipped.length ? ` Skipped: ${skipped.join("; ")}` : ""
+  }`;
+  return go(request, "/interns", added.length ? "notice" : "error", summary);
 }
 
 async function createTeam(request: NextRequest, user: NonNullable<Awaited<ReturnType<typeof getSession>>>, form: FormData) {
@@ -277,31 +330,13 @@ async function message(request: NextRequest, user: NonNullable<Awaited<ReturnTyp
  * a manager records them as on file, which opens the intern workspace without signing again.
  * Each record notes who marked it and when, for the audit trail.
  */
-async function formsOnFile(request: NextRequest, user: NonNullable<Awaited<ReturnType<typeof getSession>>>, form: FormData) {
+async function formsOnFile(request: NextRequest, user: Session, form: FormData) {
   if (!isLeadOrAdmin(user)) return go(request, "/intern", "error", "Only program managers can do that");
   const all = String(form.get("internId") ?? "") === "all";
   const interns = await prisma.intern.findMany({ where: all ? {} : { id: String(form.get("internId") ?? "") } });
   if (interns.length === 0) return go(request, "/interns", "error", "Intern not found");
-  const packets = await prisma.accessPacket.findMany({
-    where: { active: true, audience: { in: ["intern", "intern_parent"] } },
-  });
   for (const intern of interns) {
-    for (const packet of packets) {
-      await prisma.accessCompletion.upsert({
-        where: { packetId_subjectKey_signerRole: { packetId: packet.id, subjectKey: intern.id, signerRole: packet.audience } },
-        update: {},
-        create: {
-          packetId: packet.id,
-          subjectKey: intern.id,
-          signerRole: packet.audience,
-          signerName: `On file (signed outside the portal), recorded by ${user.name}`,
-          signerUserId: user.id,
-          version: packet.version,
-          answersJson: JSON.stringify({ onFile: true }),
-        },
-      });
-    }
-    await refreshInternStatus(intern.id);
+    await recordFormsOnFile(intern.id, user);
     await audit("InternFormsOnFile", "Intern", intern.id, user.id);
   }
   return go(

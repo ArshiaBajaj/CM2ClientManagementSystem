@@ -30,6 +30,18 @@ Optional environment variables:
 | `DEMO_LOGINS` | Set to `on` to turn on the seeded demo accounts and list them on /login. Leave unset once real families use it. |
 | `CRON_SECRET` | Locks the daily reminder job to Vercel's scheduler |
 
+## Signing in
+
+- **Managers**: Arshia Bajaj and Rebecca Oertell always have Admin accounts (`src/lib/managers.ts`). They're created or
+  upgraded to Admin every time the server starts.
+- **Sign in with Google**: set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Vercel (a Google Cloud "OAuth client ID",
+  type Web application, with redirect URI `https://cm2-workspace.vercel.app/api/auth/google/callback`). Google only
+  confirms the email; the person still needs a portal account a manager added.
+- **Passwords** keep working: managers issue a temporary password from Settings → Sign-in help.
+- **Start fresh** (Settings, admins only) deletes all people and activity but keeps templates, session types, settings,
+  the audit log, and the managers' accounts.
+- **Interns**: Interns → Add interns takes a pasted list (name, email). This year's forms are marked on file automatically.
+
 ## Deploying
 
 New tables and columns reach the database without running anything by hand, two ways:

@@ -6,6 +6,8 @@ import { prisma } from "@/lib/db";
 import { Notice, Shell } from "@/components/shell";
 import { PERMISSIONS, getProgramSettings, parsePermissions } from "@/lib/settings";
 import { RELEASE_ANCHORS, describeOffset } from "@/lib/releases";
+import { googleEnabled } from "@/lib/google";
+import { DEMO_EMAILS } from "@/lib/security";
 
 const KIND_LABELS: Record<string, string> = {
   first: "First session",
@@ -53,7 +55,9 @@ export default async function SettingsPage({
     ["types", "Appointment types"],
     ["releases", "Automatic forms"],
     ["email", "Confirmation email"],
+    ...(user.role === "admin" ? [["fresh", "Start fresh"]] : []),
   ];
+  const google = googleEnabled();
 
   return (
     <Shell user={user}>
@@ -130,9 +134,9 @@ export default async function SettingsPage({
       <section id="team" className="mt-10 scroll-mt-6">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Team accounts</h2>
         <p className="mt-2 max-w-2xl text-sm text-ink/65">
-          Create a login for a program manager or a coach. You&apos;ll see their temporary password once at the top of the
-          page; they choose their own at first sign-in. Coaches still sign their coach forms before any students appear.
-          Families and interns are added from Clients and Interns.
+          Add a program manager or a coach by email. {google ? "They can sign in with Google right away using that email, or " : "They "}
+          use the temporary password shown once at the top of the page. Coaches sign their coach forms before any
+          students appear. Families and interns are added from Clients and Interns.
         </p>
         <form action="/api/settings" method="post" className="mt-4 grid max-w-3xl gap-3 sm:grid-cols-[1fr_1fr_10rem_auto] sm:items-end">
           <input type="hidden" name="intent" value="team_account" />
@@ -418,6 +422,32 @@ export default async function SettingsPage({
           <button className="btn">Save email</button>
         </form>
       </section>
+
+      {user.role === "admin" ? (
+        <section id="fresh" className="mt-14 scroll-mt-6 rounded-xl border border-signal/30 p-6">
+          <h2 className="font-display text-2xl font-semibold tracking-tight">Start fresh</h2>
+          <p className="mt-2 max-w-2xl text-sm text-ink/70">
+            Deletes every student, family, session, note, message, goal, form answer, coach, intern, team, and preview
+            account, along with every login except the program managers&apos; and yours. It keeps your form and
+            agreement templates, session types, these settings, and the audit log. <strong>This can&apos;t be undone.</strong>
+          </p>
+          {DEMO_EMAILS.has(user.email) ? (
+            <p className="mt-3 text-sm font-medium text-signal">
+              Sign in with your own manager account first. The preview account you&apos;re using now is one of the
+              things this deletes.
+            </p>
+          ) : (
+            <form action="/api/settings" method="post" className="mt-4 flex max-w-xl flex-wrap items-end gap-3">
+              <input type="hidden" name="intent" value="start_fresh" />
+              <label className="block flex-1 text-sm font-medium">
+                Type START FRESH to confirm
+                <input name="confirm" required autoComplete="off" className="field" />
+              </label>
+              <button className="btn bg-signal hover:bg-signal/90">Delete everything and start fresh</button>
+            </form>
+          )}
+        </section>
+      ) : null}
     </Shell>
   );
 }

@@ -5,7 +5,9 @@ import { prisma } from "@/lib/db";
 import { PERMISSIONS, getProgramSettings } from "@/lib/settings";
 import { RELEASE_ANCHORS } from "@/lib/releases";
 import { hashPassword } from "@/lib/password";
-import { audit, setFlash, temporaryPassword } from "@/lib/security";
+import { DEMO_EMAILS, audit, setFlash, temporaryPassword } from "@/lib/security";
+import { startFresh } from "@/lib/start-fresh";
+import { ensureProgramChannels } from "@/lib/gate";
 
 function back(request: NextRequest, section: string, key: "notice" | "error", message: string) {
   return NextResponse.redirect(
@@ -30,6 +32,18 @@ export async function POST(request: NextRequest) {
   const form = await request.formData();
   const intent = String(form.get("intent") ?? "program").trim();
   const on = (name: string) => String(form.get(name) ?? "") === "1";
+
+  if (intent === "start_fresh") {
+    if (user.role !== "admin") return back(request, "fresh", "error", "Only an admin can start fresh");
+    if (DEMO_EMAILS.has(user.email)) return back(request, "fresh", "error", "Sign in with your own manager account first");
+    if (String(form.get("confirm") ?? "").trim().toUpperCase() !== "START FRESH") {
+      return back(request, "fresh", "error", "Type START FRESH to confirm");
+    }
+    await startFresh(user.id);
+    await ensureProgramChannels();
+    await audit("StartedFresh", "Program", "all", user.id);
+    return back(request, "team", "notice", "Done. The portal is empty and ready. Add your coaches here, then interns and clients.");
+  }
 
   if (intent === "temp_password") {
     const email = String(form.get("email") ?? "").trim().toLowerCase();

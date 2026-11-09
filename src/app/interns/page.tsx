@@ -30,8 +30,8 @@ export default async function InternsAdminPage({
           <p className="label-caps text-accent">Access</p>
           <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">Interns and coach forms</h1>
           <p className="mt-2 max-w-2xl text-ink/60">
-            Watch who is still signing. A coach with forms incomplete can sign in, but their students stay hidden. An
-            intern needs both badges signed before team chat opens.
+            Interns and coaches in one place. A coach&apos;s students appear once their coach forms are signed. Interns
+            start with this year&apos;s forms already on file.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -45,14 +45,14 @@ export default async function InternsAdminPage({
             Documents
           </Link>
           <Link href="/interns/new" className="btn">
-            Enroll intern
+            Add interns
           </Link>
         </div>
       </div>
       <Guide
         steps={[
-          { title: "Enroll", body: "Add the intern and a parent email. Each gets a login with their own temporary password, shown to you once." },
-          { title: "They sign", body: "The intern signs their forms. The parent signs separately. You can see both badges here." },
+          { title: "Add interns", body: "Paste names and emails. Their forms are marked on file and their workspace opens right away." },
+          { title: "They sign in", body: "With Google using that email, or with the temporary password shown to you once." },
           { title: "They collaborate", body: "Program chat and Documents let you read every team. A team's private channel is not visible to other teams." },
         ]}
       />
@@ -80,7 +80,7 @@ export default async function InternsAdminPage({
       <section className="mt-10">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Interns</h2>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-ink/55">Both badges must say signed. Parents can check status. They do not see team chat.</p>
+          <p className="text-sm text-ink/55">Green badges mean the forms are on file and the workspace is open.</p>
           {interns.some((i) => !i.internDone || !i.parentDone) ? (
             <form action="/api/interns" method="post">
               <input type="hidden" name="intent" value="on-file" />
@@ -99,7 +99,8 @@ export default async function InternsAdminPage({
                   <span className="font-normal text-ink/45">{intern.publicId}</span>
                 </p>
                 <p className="text-sm text-ink/50">
-                  {intern.team.name} · {intern.email} · parent {intern.parentName} ({intern.parentEmail})
+                  {intern.team.name} · {intern.email}
+                  {intern.parentName ? ` · parent ${intern.parentName}${intern.parentEmail ? ` (${intern.parentEmail})` : ""}` : ""}
                 </p>
               </div>
               <div className="flex gap-2 text-xs font-medium">
