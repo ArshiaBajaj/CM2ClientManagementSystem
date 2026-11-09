@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { Shell } from "@/components/shell";
+import { prisma } from "@/lib/db";
 
 export default async function PasswordPage({
   searchParams,
@@ -9,8 +10,9 @@ export default async function PasswordPage({
 }) {
   const user = await getSession();
   if (!user) redirect("/login");
-  const { error, first } = await searchParams;
-  const required = first === "1" || user.mustChangePassword;
+  const { error } = await searchParams;
+  const account = await prisma.user.findUnique({ where: { id: user.id }, select: { mustChangePassword: true } });
+  const required = Boolean(account?.mustChangePassword);
 
   return (
     <Shell user={user} passwordGate={false}>
@@ -21,7 +23,7 @@ export default async function PasswordPage({
         </h1>
         <p className="mt-3 text-ink/60">
           {required
-            ? "Welcome to the client workspace. Replace your temporary password before you start."
+            ? "Welcome to Coach Me 2. Choose your own password (at least 8 characters) to finish signing in."
             : "Use at least 8 characters."}
         </p>
         {error ? (
@@ -30,16 +32,18 @@ export default async function PasswordPage({
           </p>
         ) : null}
         <form action="/api/account/password" method="post" className="panel mt-8 space-y-4 rounded-xl p-6">
-          <label className="block text-sm font-medium">
-            {required ? "Temporary password" : "Current password"}
-            <input
-              name="currentPassword"
-              type="password"
-              required
-              autoComplete="current-password"
-              className="field"
-            />
-          </label>
+          {required ? null : (
+            <label className="block text-sm font-medium">
+              Current password
+              <input
+                name="currentPassword"
+                type="password"
+                required
+                autoComplete="current-password"
+                className="field"
+              />
+            </label>
+          )}
           <label className="block text-sm font-medium">
             New password
             <input

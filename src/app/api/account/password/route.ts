@@ -23,10 +23,13 @@ export async function POST(request: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id: session.id } });
   if (!user) return NextResponse.redirect(new URL("/login", request.url), 303);
 
-  if (!verifyPassword(current, user.password)) return back(request, "Current password is incorrect");
+  // Someone setting a password for the first time just signed in with the temporary one, so it isn't asked again.
+  if (!user.mustChangePassword && !verifyPassword(current.trim(), user.password)) {
+    return back(request, "Current password is incorrect");
+  }
   if (next.length < 8) return back(request, "New password must be at least 8 characters");
   if (next !== confirm) return back(request, "New passwords don't match");
-  if (next === current) return back(request, "Choose a password different from the temporary one");
+  if (verifyPassword(next, user.password)) return back(request, "Choose a password different from the temporary one");
 
   await prisma.user.update({
     where: { id: user.id },

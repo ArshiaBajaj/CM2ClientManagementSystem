@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (issued.length) {
-    await setFlash(`Temporary passwords (shown once, share them privately): ${issued.join(" · ")}. Each person picks their own password at first sign-in.`);
+    await setFlash(`Shown once, share them privately. Each person picks their own password at first sign-in. Temporary passwords:  ${issued.join("  ·  ")}`);
   }
   return NextResponse.redirect(new URL(`/clients/${client.id}`, request.url), 303);
 }

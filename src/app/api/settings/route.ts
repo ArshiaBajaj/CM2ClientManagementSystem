@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     await prisma.user.update({ where: { id: target.id }, data: { password: hashPassword(temp), mustChangePassword: true } });
     await prisma.auditEvent.deleteMany({ where: { action: "LoginFailed", entityId: email } });
     await audit("TemporaryPasswordIssued", "User", target.id, user.id);
-    await setFlash(`Temporary password for ${email} (shown once, share it privately): ${temp}. They pick their own at sign-in.`);
+    await setFlash(`Shown once, share it privately. They pick their own at sign-in. Temporary password for ${email}:  ${temp}`);
     return back(request, "signin", "notice", "Temporary password created");
   }
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     });
     await audit("TeamAccountCreated", "User", created.id, user.id, { role });
     await setFlash(
-      `${name} can sign in as ${role === "coach" ? "a coach" : role === "admin" ? "an admin" : "a manager"} with ${email} and the temporary password ${temp} (shown once; share it privately).${role === "coach" ? " They sign their coach forms before students open." : ""}`,
+      `${name} can sign in as ${role === "coach" ? "a coach" : role === "admin" ? "an admin" : "a manager"} with ${email}.${role === "coach" ? " They sign their coach forms before students open." : ""} Shown once, share it privately. Temporary password:  ${temp}`,
     );
     return back(request, "team", "notice", "Account created");
   }

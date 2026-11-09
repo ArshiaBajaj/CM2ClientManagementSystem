@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
   if (createClientLogin) {
     const temp = temporaryPassword();
-    await setFlash(`Temporary password for ${clientEmail} (shown once): ${temp}. They pick their own at first sign-in.`);
+    await setFlash(`Shown once, share it privately. They pick their own at first sign-in. Temporary password for ${clientEmail}:  ${temp}`);
     await prisma.user.create({
       data: {
         email: clientEmail,

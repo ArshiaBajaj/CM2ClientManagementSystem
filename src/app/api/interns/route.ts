@@ -141,7 +141,7 @@ async function enroll(request: NextRequest, user: Session, form: FormData) {
     parentPhone: String(form.get("parentPhone") ?? "").trim(),
   });
   if ("error" in result) return go(request, "/interns/new", "error", `Couldn't add ${firstName}: ${result.error}`);
-  await setFlash(`${email} · temporary password ${result.temp} (shown once).`);
+  await setFlash(`Shown once, share it privately. Temporary password for ${email}:  ${result.temp}`);
   return go(request, "/interns", "notice", `${firstName} ${lastName} is on ${team.name} and their workspace is open.`);
 }
 
@@ -169,7 +169,7 @@ async function enrollMany(request: NextRequest, user: Session, form: FormData) {
     else added.push(`${email} · ${result.temp}`);
   }
   if (added.length) {
-    await setFlash(`Temporary passwords (shown once): ${added.join(" | ")}`);
+    await setFlash(`Shown once, share them privately. Temporary passwords:  ${added.join("  |  ")}`);
   }
   const summary = `Added ${added.length} intern${added.length === 1 ? "" : "s"} to ${team.name}.${
     skipped.length ? ` Skipped: ${skipped.join("; ")}` : ""
