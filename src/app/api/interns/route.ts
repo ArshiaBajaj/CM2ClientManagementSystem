@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
   if (intent === "message") return message(request, user, form);
   if (intent === "direct") return startDirect(request, user, form);
   if (intent === "on-file") return formsOnFile(request, user, form);
+  if (intent === "move-team") return moveTeam(request, user, form);
   if (intent === "document") return shareDocument(request, user, form);
   if (intent === "task") return createTask(request, user, form);
   if (intent === "task-status") return moveTask(request, user, form);
@@ -360,6 +361,19 @@ async function message(request: NextRequest, user: NonNullable<Awaited<ReturnTyp
  * a manager records them as on file, which opens the intern workspace without signing again.
  * Each record notes who marked it and when, for the audit trail.
  */
+/** Puts an intern on a different team (their team chat and documents follow). */
+async function moveTeam(request: NextRequest, user: Session, form: FormData) {
+  if (!isLeadOrAdmin(user)) return go(request, "/intern", "error", "Only program managers can do that");
+  const intern = await prisma.intern.findUnique({ where: { id: String(form.get("internId") ?? "") } });
+  const team = await prisma.internTeam.findUnique({ where: { id: String(form.get("teamId") ?? "") } });
+  if (!intern || !team) return go(request, "/interns", "error", "Pick a team");
+  await prisma.intern.update({ where: { id: intern.id }, data: { teamId: team.id } });
+  await prisma.internCommitment.updateMany({ where: { internId: intern.id, status: "open" }, data: { teamId: team.id } });
+  await ensureTeamChannel(team.id, team.name);
+  await audit("InternTeamChanged", "Intern", intern.id, user.id, { teamId: team.id });
+  return go(request, "/interns", "notice", `${intern.firstName} is now on ${team.name}`);
+}
+
 async function formsOnFile(request: NextRequest, user: Session, form: FormData) {
   if (!isLeadOrAdmin(user)) return go(request, "/intern", "error", "Only program managers can do that");
   const all = String(form.get("internId") ?? "") === "all";

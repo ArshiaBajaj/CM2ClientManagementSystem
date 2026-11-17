@@ -106,7 +106,24 @@ export default async function InternsAdminPage({
                   {intern.parentName ? ` · parent ${intern.parentName}${intern.parentEmail ? ` (${intern.parentEmail})` : ""}` : ""}
                 </p>
               </div>
-              <div className="flex gap-2 text-xs font-medium">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
+                {teams.length > 1 ? (
+                  <form action="/api/interns" method="post" className="flex items-center gap-1">
+                    <input type="hidden" name="intent" value="move-team" />
+                    <input type="hidden" name="internId" value={intern.id} />
+                    <label className="sr-only" htmlFor={`team-${intern.id}`}>
+                      Team for {intern.firstName}
+                    </label>
+                    <select id={`team-${intern.id}`} name="teamId" defaultValue={intern.team.id} className="rounded-full border border-ink/20 bg-white px-2 py-0.5">
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button className="rounded-full border border-ink/20 px-2.5 py-0.5 hover:border-ink/40">Move</button>
+                  </form>
+                ) : null}
                 <span className={`rounded-full px-2.5 py-0.5 ${intern.internDone ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
                   Intern {intern.internDone ? "signed" : "pending"}
                 </span>
