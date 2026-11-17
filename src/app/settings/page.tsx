@@ -7,6 +7,7 @@ import { Notice, Shell } from "@/components/shell";
 import { PERMISSIONS, getProgramSettings, parsePermissions } from "@/lib/settings";
 import { RELEASE_ANCHORS, describeOffset } from "@/lib/releases";
 import { googleEnabled } from "@/lib/google";
+import { emailReady } from "@/lib/invite";
 import { DEMO_EMAILS } from "@/lib/security";
 
 const KIND_LABELS: Record<string, string> = {
@@ -58,6 +59,7 @@ export default async function SettingsPage({
     ...(user.role === "admin" ? [["fresh", "Start fresh"]] : []),
   ];
   const google = googleEnabled();
+  const mail = emailReady();
 
   return (
     <Shell user={user}>
@@ -163,18 +165,29 @@ export default async function SettingsPage({
       <section id="signin" className="mt-10 scroll-mt-6">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Sign-in help</h2>
         <p className="mt-2 max-w-2xl text-sm text-ink/65">
-          Give someone a new temporary password: a newly activated coach, or anyone locked out. You&apos;ll see it once
-          at the top of the page. They choose their own the next time they sign in. This also clears a lockout from
-          too many wrong passwords.
+          Someone can&apos;t get in, or never got their welcome email? {mail ? "Email them a fresh sign-in link, or " : ""}create
+          a temporary password you&apos;ll see once at the top of the page. Either one also clears a lockout from too many
+          wrong passwords.
         </p>
-        <form action="/api/settings" method="post" className="mt-4 flex max-w-xl flex-wrap items-end gap-3">
-          <input type="hidden" name="intent" value="temp_password" />
-          <label className="block flex-1 text-sm font-medium">
+        <form action="/api/settings" method="post" className="mt-4 flex max-w-2xl flex-wrap items-end gap-3">
+          <label className="block min-w-60 flex-1 text-sm font-medium">
             Their email
             <input type="email" name="email" required className="field" />
           </label>
-          <button className="btn">Create temporary password</button>
+          {mail ? (
+            <button name="intent" value="email_link" className="btn">
+              Email a sign-in link
+            </button>
+          ) : null}
+          <button name="intent" value="temp_password" className={mail ? "btn-secondary" : "btn"}>
+            Create temporary password
+          </button>
         </form>
+        <p className="mt-3 text-xs text-ink/55">
+          {mail
+            ? "Welcome emails are on: anyone you add gets an email with a link to set their own password."
+            : "Welcome emails are off, so new people get a temporary password instead. Ask your developer to add SMTP_USER and SMTP_PASS to switch them on."}
+        </p>
       </section>
 
       <section id="access" className="mt-10 scroll-mt-6">

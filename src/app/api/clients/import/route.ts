@@ -6,6 +6,7 @@ import { hashPassword } from "@/lib/password";
 import { nextClientPublicId } from "@/lib/ids";
 import { audit, temporaryPassword } from "@/lib/security";
 import { readClientRows, toCsv } from "@/lib/import-clients";
+import { sendWelcome, siteOrigin } from "@/lib/invite";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -34,6 +35,16 @@ export async function POST(request: NextRequest) {
 
   const report: string[][] = [["Line", "Student", "Result", "Login email", "Temporary password", "Parent login", "Parent temporary password"]];
   let created = 0;
+  let emailed = 0;
+  const origin = siteOrigin(request.url);
+  // A sent welcome email replaces the temporary password in the results file.
+  const welcome = async (email: string, temp: string) => {
+    if (await sendWelcome(email, origin, user.name)) {
+      emailed += 1;
+      return "(welcome email sent)";
+    }
+    return temp;
+  };
 
   for (const row of rows) {
     const name = `${row.firstName} ${row.lastName}`.trim();
@@ -88,6 +99,7 @@ export async function POST(request: NextRequest) {
         data: { email: row.email, name, role: "client", clientId: client.id, password: hashPassword(studentTemp), mustChangePassword: true },
       });
       studentLogin = row.email;
+      studentTemp = await welcome(row.email, studentTemp);
     }
 
     let parentLogin = "";
@@ -109,6 +121,7 @@ export async function POST(request: NextRequest) {
           data: { email: row.guardianEmail, name: row.guardianName, role: "guardian", password: hashPassword(parentTemp), mustChangePassword: true },
         });
         parentLogin = row.guardianEmail;
+        parentTemp = await welcome(row.guardianEmail, parentTemp);
       }
     }
 
@@ -124,7 +137,7 @@ export async function POST(request: NextRequest) {
     ]);
   }
 
-  await audit("ClientsImported", "Client", "bulk", user.id, { rows: rows.length, created });
+  await audit("ClientsImported", "Client", "bulk", user.id, { rows: rows.length, created, emailed });
 
   return new NextResponse(toCsv(report), {
     headers: {

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getProgramSettings } from "@/lib/settings";
+import { sendEmail } from "@/lib/invite";
 
 export async function sendAppointmentConfirmation(opts: {
   appointmentId: string;
@@ -15,14 +16,15 @@ export async function sendAppointmentConfirmation(opts: {
     .replaceAll("{{coachName}}", opts.coachName)
     .replaceAll("{{startsAt}}", opts.startsAt.toLocaleString());
 
-  // Local/dev: persist outbound email for audit; wire SMTP later via env.
+  // Sent when email is set up (SMTP_USER / SMTP_PASS); always logged.
+  const sent = await sendEmail(opts.toEmail, settings.confirmationEmailSubject, body);
   await prisma.emailLog.create({
     data: {
       appointmentId: opts.appointmentId,
       toEmail: opts.toEmail,
       subject: settings.confirmationEmailSubject,
       body,
-      status: "queued_local",
+      status: sent ? "sent" : "queued_local",
     },
   });
 

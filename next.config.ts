@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // Signed-in pages hold private information: never cache them in shared caches.
       {
-        source: "/(workspace|clients|chat|calendar|journal|goals|forms|metrics|values|portfolio|documents|credits|matching|settings|intern|interns|onboarding|account|availability|updates)/:path*",
+        source: "/(workspace|clients|chat|calendar|journal|goals|forms|metrics|values|portfolio|documents|credits|matching|settings|intern|interns|onboarding|account|availability|updates|welcome)/:path*",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
     ];

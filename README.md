@@ -37,6 +37,9 @@ Optional environment variables:
 - **Sign in with Google**: set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Vercel (a Google Cloud "OAuth client ID",
   type Web application, with redirect URI `https://cm2-workspace.vercel.app/api/auth/google/callback`). Google only
   confirms the email; the person still needs a portal account a manager added.
+- **Welcome emails**: set `SMTP_USER` (a Gmail address) and `SMTP_PASS` (a Google app password) in Vercel. Everyone a
+  manager adds (families, coaches, interns, spreadsheet imports) gets an email with a 14-day, one-time link to set
+  their own password. Settings → Sign-in help can resend it. Without these, temporary passwords are shown instead.
 - **Passwords** keep working: managers issue a temporary password from Settings → Sign-in help.
 - **Start fresh** (Settings, admins only) deletes all people and activity but keeps templates, session types, settings,
   the audit log, and the managers' accounts.

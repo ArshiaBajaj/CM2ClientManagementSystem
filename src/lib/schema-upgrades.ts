@@ -30,6 +30,10 @@ const STATEMENTS = [
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "PushSubscription_endpoint_key" ON "PushSubscription"("endpoint")`,
   `CREATE INDEX IF NOT EXISTS "PushSubscription_userId_idx" ON "PushSubscription"("userId")`,
+  // Welcome emails
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "inviteTokenHash" TEXT`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "inviteExpiresAt" TIMESTAMP(3)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "User_inviteTokenHash_key" ON "User"("inviteTokenHash")`,
   // World View
   `ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "country" TEXT`,
   `ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "worldOptIn" BOOLEAN NOT NULL DEFAULT false`,

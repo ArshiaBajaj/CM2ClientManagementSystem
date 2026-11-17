@@ -7,6 +7,7 @@ import { RELEASE_ANCHORS } from "@/lib/releases";
 import { hashPassword } from "@/lib/password";
 import { DEMO_EMAILS, audit, setFlash, temporaryPassword } from "@/lib/security";
 import { startFresh } from "@/lib/start-fresh";
+import { emailReady, sendWelcome, siteOrigin } from "@/lib/invite";
 import { ensureProgramChannels } from "@/lib/gate";
 
 function back(request: NextRequest, section: string, key: "notice" | "error", message: string) {
@@ -43,6 +44,21 @@ export async function POST(request: NextRequest) {
     await ensureProgramChannels();
     await audit("StartedFresh", "Program", "all", user.id);
     return back(request, "team", "notice", "Done. The portal is empty and ready. Add your coaches here, then interns and clients.");
+  }
+
+  if (intent === "email_link") {
+    const email = String(form.get("email") ?? "").toLowerCase().trim();
+    const target = await prisma.user.findUnique({ where: { email } });
+    if (!target) return back(request, "signin", "error", "No account uses that email");
+    if ((target.role === "admin" || target.role === "team_lead") && target.id !== user.id && user.role !== "admin") {
+      return back(request, "signin", "error", "Only an admin can reset a manager's password");
+    }
+    if (!emailReady()) return back(request, "signin", "error", "Email isn't set up yet. Use a temporary password instead.");
+    if (!(await sendWelcome(email, siteOrigin(request.url), user.name))) {
+      return back(request, "signin", "error", "The email didn't send. Check the address, or use a temporary password.");
+    }
+    await audit("WelcomeEmailSent", "User", target.id, user.id);
+    return back(request, "signin", "notice", `Sign-in link emailed to ${email}`);
   }
 
   if (intent === "temp_password") {
@@ -92,6 +108,9 @@ export async function POST(request: NextRequest) {
       data: { email, name, role, coachId, password: hashPassword(temp), mustChangePassword: true },
     });
     await audit("TeamAccountCreated", "User", created.id, user.id, { role });
+    if (await sendWelcome(email, siteOrigin(request.url), user.name)) {
+      return back(request, "team", "notice", `Account created. A welcome email went to ${email}.`);
+    }
     await setFlash(
       `${name} can sign in as ${role === "coach" ? "a coach" : role === "admin" ? "an admin" : "a manager"} with ${email}.${role === "coach" ? " They sign their coach forms before students open." : ""} Shown once, share it privately. Temporary password:  ${temp}`,
     );

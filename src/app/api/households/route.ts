@@ -4,6 +4,7 @@ import { isLeadOrAdmin } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { setFlash, temporaryPassword } from "@/lib/security";
+import { sendWelcomes, siteOrigin } from "@/lib/invite";
 import { nextClientPublicId } from "@/lib/ids";
 import { ensureWallet, addCredits } from "@/lib/credits";
 
@@ -176,7 +177,10 @@ export async function POST(request: NextRequest) {
   });
 
   if (issued.length) {
-    await setFlash(`Shown once, share them privately. Each person picks their own password at first sign-in. Temporary passwords:  ${issued.join("  ·  ")}`);
+    const emailed = await sendWelcomes(issued.map((line) => line.split(": ")[0]), siteOrigin(request.url), user.name);
+    const left = issued.filter((line) => !emailed.includes(line.split(": ")[0]));
+    if (emailed.length) await setFlash(`Welcome email sent to ${emailed.join(" and ")}. They set their own password from the link.`);
+    if (left.length) await setFlash(`${emailed.length ? `Welcome email sent to ${emailed.join(" and ")}. ` : ""}Shown once, share them privately. Each person picks their own password at first sign-in. Temporary passwords:  ${left.join("  ·  ")}`);
   }
   return NextResponse.redirect(new URL(`/clients/${client.id}`, request.url), 303);
 }

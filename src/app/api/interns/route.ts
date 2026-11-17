@@ -4,6 +4,7 @@ import { isLeadOrAdmin } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { notifyUsers } from "@/lib/push";
 import { audit, setFlash, temporaryPassword } from "@/lib/security";
+import { sendWelcome, siteOrigin } from "@/lib/invite";
 import { hashPassword } from "@/lib/password";
 import { nextInternPublicId } from "@/lib/ids";
 import { answersFromForm, ensureProgramChannels, ensureTeamChannel, internClearance, internRecord } from "@/lib/gate";
@@ -74,9 +75,10 @@ async function recordFormsOnFile(internId: string, user: Session) {
 /** Creates one intern with a login and their forms already on file. Returns their temporary password, or why not. */
 async function addIntern(
   user: Session,
+  origin: string,
   teamId: string,
   data: { firstName: string; lastName: string; email: string; parentName?: string; parentEmail?: string; parentPhone?: string },
-): Promise<{ temp: string } | { error: string }> {
+): Promise<{ temp: string; emailed: boolean } | { error: string }> {
   const email = data.email.toLowerCase().trim();
   if (!data.firstName || !EMAIL.test(email)) return { error: "needs a name and a valid email" };
   if (await prisma.user.findUnique({ where: { email } })) return { error: "that email already has a login" };
@@ -106,7 +108,7 @@ async function addIntern(
   });
   await recordFormsOnFile(intern.id, user);
   await audit("InternEnrolled", "Intern", intern.id, user.id);
-  return { temp };
+  return { temp, emailed: await sendWelcome(email, origin, user.name) };
 }
 
 async function pickTeam(form: FormData) {
@@ -132,7 +134,7 @@ async function enroll(request: NextRequest, user: Session, form: FormData) {
   const team = await pickTeam(form);
   if (!team) return go(request, "/interns/new", "error", "Choose a team or type a new team name");
 
-  const result = await addIntern(user, team.id, {
+  const result = await addIntern(user, siteOrigin(request.url), team.id, {
     firstName,
     lastName,
     email,
@@ -141,7 +143,11 @@ async function enroll(request: NextRequest, user: Session, form: FormData) {
     parentPhone: String(form.get("parentPhone") ?? "").trim(),
   });
   if ("error" in result) return go(request, "/interns/new", "error", `Couldn't add ${firstName}: ${result.error}`);
-  await setFlash(`Shown once, share it privately. Temporary password for ${email}:  ${result.temp}`);
+  if (result.emailed) {
+    await setFlash(`Welcome email sent to ${email}. They can also sign in with Google.`);
+  } else {
+    await setFlash(`Shown once, share it privately. Temporary password for ${email}:  ${result.temp}`);
+  }
   return go(request, "/interns", "notice", `${firstName} ${lastName} is on ${team.name} and their workspace is open.`);
 }
 
@@ -158,23 +164,27 @@ async function enrollMany(request: NextRequest, user: Session, form: FormData) {
   if (!team) return go(request, "/interns/new", "error", "Choose a team or type a new team name");
 
   const added: string[] = [];
+  const emailed: string[] = [];
+  const origin = siteOrigin(request.url);
   const skipped: string[] = [];
   for (const line of lines) {
     const parts = line.split(/[,\t;]/).map((p) => p.trim()).filter(Boolean);
     const email = parts.find((p) => EMAIL.test(p)) ?? "";
     const name = parts.filter((p) => p !== email).join(" ").trim() || email.split("@")[0];
     const [firstName, ...rest] = name.split(/\s+/);
-    const result = await addIntern(user, team.id, { firstName: firstName ?? "", lastName: rest.join(" "), email });
+    const result = await addIntern(user, origin, team.id, { firstName: firstName ?? "", lastName: rest.join(" "), email });
     if ("error" in result) skipped.push(`${line} (${result.error})`);
+    else if (result.emailed) emailed.push(email);
     else added.push(`${email} · ${result.temp}`);
   }
   if (added.length) {
     await setFlash(`Shown once, share them privately. Temporary passwords:  ${added.join("  |  ")}`);
   }
-  const summary = `Added ${added.length} intern${added.length === 1 ? "" : "s"} to ${team.name}.${
+  const count = added.length + emailed.length;
+  const summary = `Added ${count} intern${count === 1 ? "" : "s"} to ${team.name}.${emailed.length ? ` Welcome emails sent to ${emailed.length}.` : ""}${
     skipped.length ? ` Skipped: ${skipped.join("; ")}` : ""
   }`;
-  return go(request, "/interns", added.length ? "notice" : "error", summary);
+  return go(request, "/interns", count ? "notice" : "error", summary);
 }
 
 async function createTeam(request: NextRequest, user: NonNullable<Awaited<ReturnType<typeof getSession>>>, form: FormData) {

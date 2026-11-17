@@ -7,6 +7,7 @@ import { hashPassword } from "@/lib/password";
 import { nextPrivateClientPublicId } from "@/lib/ids";
 import { CASELOAD_COOKIE } from "@/lib/caseload";
 import { setFlash, temporaryPassword } from "@/lib/security";
+import { sendWelcome, siteOrigin } from "@/lib/invite";
 
 function back(request: NextRequest, message: string) {
   return NextResponse.redirect(
@@ -87,7 +88,6 @@ export async function POST(request: NextRequest) {
 
   if (createClientLogin) {
     const temp = temporaryPassword();
-    await setFlash(`Shown once, share it privately. They pick their own at first sign-in. Temporary password for ${clientEmail}:  ${temp}`);
     await prisma.user.create({
       data: {
         email: clientEmail,
@@ -98,6 +98,11 @@ export async function POST(request: NextRequest) {
         mustChangePassword: true,
       },
     });
+    if (await sendWelcome(clientEmail, siteOrigin(request.url), user.name)) {
+      await setFlash(`Welcome email sent to ${clientEmail}. They set their own password from the link.`);
+    } else {
+      await setFlash(`Shown once, share it privately. They pick their own at first sign-in. Temporary password for ${clientEmail}:  ${temp}`);
+    }
   }
 
   await prisma.auditEvent.create({
