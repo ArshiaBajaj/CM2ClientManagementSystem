@@ -137,8 +137,11 @@ export default async function SettingsPage({
       <section id="team" className="mt-10 scroll-mt-6">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Team accounts</h2>
         <p className="mt-2 max-w-2xl text-sm text-ink/65">
-          Add a program manager or a coach by email. {google ? "They can sign in with Google right away using that email, or " : "They "}
-          use the temporary password shown once at the top of the page. Coaches sign their coach forms before any
+          Add a program manager or a coach by email.{" "}
+          {mail
+            ? "They get a welcome email with a link to set their password"
+            : "You'll see a temporary password once at the top of the page"}
+          {google ? ", or they can sign in with Google using that email" : ""}. Coaches sign their coach forms before any
           students appear. Families and interns are added from Clients and Interns.
         </p>
         <form action="/api/settings" method="post" className="mt-4 grid max-w-3xl gap-3 sm:grid-cols-[1fr_1fr_10rem_auto] sm:items-end">

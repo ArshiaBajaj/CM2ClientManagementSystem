@@ -5,6 +5,7 @@ import { isLeadOrAdmin } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { Notice, Shell } from "@/components/shell";
 import { FOCUS_AREAS, TIME_WINDOWS, splitList } from "@/lib/matching";
+import { emailReady } from "@/lib/invite";
 import { TIMEZONES } from "@/lib/timezones";
 
 export default async function EnrollClientPage({
@@ -108,8 +109,10 @@ export default async function EnrollClientPage({
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" name="createClientLogin" value="1" defaultChecked={Boolean(req)} className="mt-1" />
             <span>
-              Create a student login. You&apos;ll see a temporary password once, to share privately; they set their own
-              at first sign-in.
+              Create a student login.{" "}
+              {emailReady()
+                ? "They get a welcome email with a link to set their own password."
+                : "You'll see a temporary password once, to share privately; they set their own at first sign-in."}
             </span>
           </label>
         </fieldset>
@@ -168,7 +171,8 @@ export default async function EnrollClientPage({
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" name="createGuardianLogin" value="1" className="mt-1" defaultChecked />
             <span>
-              Create a parent login (with its own one-time temporary password) if the email is new.
+              Create a parent login if the email is new.{" "}
+              {emailReady() ? "They get their own welcome email." : "It gets its own one-time temporary password."}
             </span>
           </label>
         </fieldset>

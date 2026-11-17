@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
+import { emailReady } from "@/lib/invite";
 import { Notice, Shell } from "@/components/shell";
 
 /** Bulk-add students and parents from one spreadsheet, such as a Healthie client export. */
@@ -44,12 +45,27 @@ export default async function ImportClientsPage({ searchParams }: { searchParams
           </label>
           <button className="btn">Import and download results</button>
           <p className="text-xs text-ink/70">
-            A results file downloads with every row&apos;s outcome and each new person&apos;s temporary password. Share
-            each password privately, then delete the file. Anyone already in the portal is skipped.
+            {emailReady()
+              ? "Everyone with a new login gets a welcome email to set their own password. A results file downloads with every row's outcome. Anyone already in the portal is skipped."
+              : "A results file downloads with every row's outcome and each new person's temporary password. Share each password privately, then delete the file. Anyone already in the portal is skipped."}
           </p>
         </form>
 
         <aside className="space-y-4 text-sm text-ink/75">
+          <h2 className="font-display text-2xl text-ink">From Healthie</h2>
+          <ol className="list-decimal space-y-1 pl-5">
+            <li>
+              In Healthie, go to <strong>Visualize → Reports → Client List → Generate Report</strong>.
+            </li>
+            <li>
+              When it&apos;s ready (it can take a while), download the CSV from <strong>Documents → Generated Reports</strong>.
+            </li>
+            <li>
+              Optional: open it in Google Sheets and add <strong>Parent name</strong> and <strong>Parent email</strong>{" "}
+              columns, so parents get their own logins too. Then File → Download → CSV.
+            </li>
+            <li>Upload it here. Archived Healthie clients are skipped, and insurance details are never imported.</li>
+          </ol>
           <h2 className="font-display text-2xl text-ink">What the file needs</h2>
           <p>A header row, then one client per row. Column names can vary; these are recognised:</p>
           <ul className="list-disc space-y-1 pl-5">

@@ -42,14 +42,17 @@ export function parseCsv(text: string): string[][] {
 }
 
 const FIELDS = {
-  firstName: ["firstname", "first", "clientfirstname", "legalfirstname", "givenname", "preferredfirstname"],
+  // Healthie's Client List report: "Client Preferred First Name" (often blank) and "Client Legal First Name".
+  preferredName: ["preferredfirstname", "clientpreferredfirstname", "preferredname", "nickname"],
+  firstName: ["firstname", "first", "clientfirstname", "legalfirstname", "clientlegalfirstname", "givenname"],
   lastName: ["lastname", "last", "clientlastname", "legallastname", "surname", "familyname"],
   fullName: ["name", "fullname", "clientname", "client", "patientname"],
-  dob: ["dob", "dateofbirth", "birthdate", "birthday", "clientdob"],
-  email: ["email", "emailaddress", "clientemail", "studentemail"],
-  phone: ["phone", "phonenumber", "mobile", "mobilephone", "cell", "cellphone", "clientphone"],
+  dob: ["dob", "dateofbirth", "birthdate", "birthday", "clientdob", "clientdateofbirth"],
+  email: ["email", "emailaddress", "clientemail", "clientemailaddress", "studentemail"],
+  phone: ["phone", "phonenumber", "mobile", "mobilephone", "cell", "cellphone", "clientphone", "clientphonenumber"],
+  status: ["status", "clientstatus"],
   guardianName: ["parentname", "guardianname", "parent", "guardian", "parentguardianname", "emergencycontactname", "emergencycontact"],
-  guardianEmail: ["parentemail", "guardianemail", "parentguardianemail", "emergencycontactemail"],
+  guardianEmail: ["parentemail", "parentemailaddress", "guardianemail", "parentguardianemail", "emergencycontactemail"],
   guardianPhone: ["parentphone", "guardianphone", "parentguardianphone", "emergencycontactphone"],
   timezone: ["timezone", "time zone"],
 } as const;
@@ -94,8 +97,13 @@ export function readClientRows(text: string): { rows: ImportRow[]; missing: stri
   if (idx.firstName < 0 && idx.fullName < 0) missing.push("a first name (or full name) column");
 
   const get = (r: string[], i: number) => (i >= 0 ? (r[i] ?? "").trim() : "");
-  const rows = table.slice(1).map((r, n) => {
-    let firstName = get(r, idx.firstName);
+  const rows = table
+    .slice(1)
+    .map((r, n) => ({ r, n }))
+    // Healthie marks former clients "Archived"; leave them out.
+    .filter(({ r }) => !/^archived$/i.test(get(r, idx.status)))
+    .map(({ r, n }) => {
+    let firstName = get(r, idx.preferredName) || get(r, idx.firstName);
     let lastName = get(r, idx.lastName);
     if (!firstName && idx.fullName >= 0) {
       const parts = get(r, idx.fullName).split(/\s+/);
@@ -114,7 +122,7 @@ export function readClientRows(text: string): { rows: ImportRow[]; missing: stri
       guardianPhone: get(r, idx.guardianPhone).slice(0, 40),
       timezone: get(r, idx.timezone) || "America/New_York",
     };
-  });
+    });
   return { rows, missing };
 }
 
