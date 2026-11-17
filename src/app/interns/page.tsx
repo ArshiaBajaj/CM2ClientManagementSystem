@@ -35,6 +35,9 @@ export default async function InternsAdminPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href="/intern/commitments" className="btn-secondary">
+            Commitments
+          </Link>
           <Link href="/intern/tasks" className="btn-secondary">
             Task board
           </Link>

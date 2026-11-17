@@ -123,7 +123,7 @@ export default async function InternChatPage({
                     <div className={`max-w-[80%] break-words rounded-2xl px-3 py-2 text-sm ${mine ? "bg-accent text-white" : "bg-paper text-ink"}`}>
                       {mine ? null : <p className="text-xs font-medium text-ink/50">{message.senderName}</p>}
                       <p className="whitespace-pre-wrap">{message.body}</p>
-                      <p className={`mt-1 text-[11px] ${mine ? "text-white/70" : "text-ink/40"}`}>
+                      <p className={`mt-1 text-[11px] ${mine ? "text-white/90" : "text-ink/65"}`}>
                         {message.createdAt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                       </p>
                     </div>

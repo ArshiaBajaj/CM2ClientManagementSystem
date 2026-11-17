@@ -114,6 +114,31 @@ export async function calendarFeed(token: string, origin: string) {
       "END:VEVENT",
     );
   }
+  if (user.role === "intern" && owner.internId) {
+    const commitments = await prisma.internCommitment.findMany({
+      where: { internId: owner.internId, status: "open", dueAt: { gte: new Date(Date.now() - 14 * 86_400_000) } },
+      orderBy: { dueAt: "asc" },
+      take: 200,
+    });
+    for (const c of commitments) {
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:commitment-${c.id}@coachme2.world`,
+        `DTSTAMP:${stamp(new Date())}`,
+        `DTSTART:${stamp(new Date(c.dueAt.getTime() - 30 * 60_000))}`,
+        `DTEND:${stamp(c.dueAt)}`,
+        fold(`SUMMARY:${escape(`Due: ${c.what}`)}`),
+        fold(`DESCRIPTION:${escape(`Your Coach Me 2 commitment. Mark it done: ${origin}/intern/commitments`)}`),
+        fold(`URL:${origin}/intern/commitments`),
+        "BEGIN:VALARM",
+        "ACTION:DISPLAY",
+        "DESCRIPTION:Coach Me 2 commitment due soon",
+        "TRIGGER:-PT3H",
+        "END:VALARM",
+        "END:VEVENT",
+      );
+    }
+  }
   lines.push("END:VCALENDAR");
   return `${lines.join("\r\n")}\r\n`;
 }

@@ -24,6 +24,8 @@ model User {
   /// Hash of the one-time link in this person's welcome email (they set their own password with it).
   inviteTokenHash String? @unique
   inviteExpiresAt DateTime?
+  /// Reminders also go to this person's email (on unless they turn it off).
+  emailNotifications Boolean @default(true)
   lastLoginAt DateTime?
   createdAt DateTime @default(now())
 }
@@ -557,6 +559,8 @@ model ProgramSettings {
   /// Keys for phone and Apple Watch notifications. Created automatically the first time they're needed.
   vapidPublicKey          String  @default("")
   vapidPrivateKey         String  @default("")
+  /// Optional Google Chat space webhook: the daily intern reminders are also posted there.
+  googleChatWebhook       String  @default("")
 }
 
 model EmailLog {
@@ -627,7 +631,32 @@ model Intern {
   status      String     @default("pending")
   user        User?
   tasks       InternTask[]
+  commitments InternCommitment[]
   createdAt   DateTime   @default(now())
+}
+
+/// Something an intern said they'd do, and by when. Made from the form or spotted in team chat ("I'll send the
+/// flyer by Wednesday"). The team can see it; reminders go out before and after it's due.
+model InternCommitment {
+  id            String    @id @default(cuid())
+  internId      String
+  intern        Intern    @relation(fields: [internId], references: [id], onDelete: Cascade)
+  teamId        String?
+  what          String
+  dueAt         DateTime
+  status        String    @default("open") // open | done | dropped
+  source        String    @default("form") // form | chat
+  channelName   String    @default("")
+  messageId     String?
+  createdById   String
+  doneAt        DateTime?
+  timesMoved    Int       @default(0)
+  remindedAt    DateTime?
+  overdueAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([internId, status])
+  @@index([status, dueAt])
 }
 
 model InternChannel {

@@ -56,6 +56,7 @@ export default async function SettingsPage({
     ["types", "Appointment types"],
     ["releases", "Automatic forms"],
     ["email", "Confirmation email"],
+    ["googlechat", "Google Chat"],
     ...(user.role === "admin" ? [["fresh", "Start fresh"]] : []),
   ];
   const google = googleEnabled();
@@ -159,6 +160,36 @@ export default async function SettingsPage({
             </select>
           </label>
           <button className="btn">Create account</button>
+        </form>
+      </section>
+
+      <section id="googlechat" className="mt-10 scroll-mt-6">
+        <h2 className="font-display text-2xl font-semibold tracking-tight">Google Chat reminders</h2>
+        <p className="mt-2 max-w-2xl text-sm text-ink/65">
+          Post each morning&apos;s intern roundup (what&apos;s due today and what&apos;s overdue) into a Google Chat space. In
+          Google Chat, open the space → space name → <span className="font-medium">Apps &amp; integrations</span> →{" "}
+          <span className="font-medium">Webhooks</span> → Add webhook, name it &ldquo;Coach Me 2&rdquo;, and paste the link here.
+          Only first names and what they committed to are posted, never client information.
+        </p>
+        <form action="/api/settings" method="post" className="mt-4 flex max-w-2xl flex-wrap items-end gap-3">
+          <label className="block min-w-60 flex-1 text-sm font-medium">
+            Webhook link
+            <input
+              name="googleChatWebhook"
+              type="url"
+              defaultValue={settings.googleChatWebhook ? "https://chat.googleapis.com/…(saved)" : ""}
+              placeholder="https://chat.googleapis.com/v1/spaces/…"
+              className="field"
+            />
+          </label>
+          <button name="intent" value="google_chat" className="btn">
+            Save
+          </button>
+          {settings.googleChatWebhook ? (
+            <button name="intent" value="google_chat_test" className="btn-secondary">
+              Send a test
+            </button>
+          ) : null}
         </form>
       </section>
 

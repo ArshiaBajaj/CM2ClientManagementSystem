@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { notifyUsers } from "@/lib/push";
+import { alertUsers, postToGoogleChat } from "@/lib/alerts";
+import { dueLabel, isOverdue, localParts } from "@/lib/commitments";
+
+/** YYYY-MM-DD in the program's time zone, `days` from now. */
+function dayKey(days = 0) {
+  const t = localParts(new Date(Date.now() + days * 86_400_000));
+  return `${t.year}-${String(t.month).padStart(2, "0")}-${String(t.day).padStart(2, "0")}`;
+}
 
 /**
  * Morning reminders, run once a day by Vercel Cron (see vercel.json):
@@ -16,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
   const until = new Date(now.getTime() + 16 * 60 * 60 * 1000);
-  const sent = { students: 0, coaches: 0, managers: 0 };
+  const sent = { students: 0, coaches: 0, managers: 0, interns: 0 };
 
   const sessions = await prisma.appointment.findMany({
     where: { status: "scheduled", startsAt: { gte: now, lt: until } },
@@ -35,7 +42,7 @@ export async function GET(request: NextRequest) {
       minute: "2-digit",
       timeZone: s.client.timezone || "America/New_York",
     });
-    await notifyUsers(
+    await alertUsers(
       students.map((u) => u.id),
       { title: "Session today", body: `With ${s.coach.name} at ${time}.`, url: "/calendar", tag: "daily" },
     );
@@ -53,7 +60,7 @@ export async function GET(request: NextRequest) {
       where: { role: "client", clientId: { in: goalClients.map((g) => g.clientId) } },
       select: { id: true },
     });
-    await notifyUsers(
+    await alertUsers(
       students.map((u) => u.id),
       { title: "Today's goals", body: "Take ten seconds to check in on your goals.", url: "/goals", tag: "daily" },
     );
@@ -69,7 +76,7 @@ export async function GET(request: NextRequest) {
   }
   for (const [coachId, { email, count }] of perCoach) {
     const coaches = await prisma.user.findMany({ where: { OR: [{ coachId }, { email }] }, select: { id: true } });
-    await notifyUsers(
+    await alertUsers(
       coaches.map((u) => u.id),
       { title: "Today", body: `You have ${count} session${count === 1 ? "" : "s"} today.`, url: "/calendar", tag: "daily" },
     );
@@ -80,12 +87,66 @@ export async function GET(request: NextRequest) {
   const requests = await prisma.coachRequest.count({ where: { status: "new" } });
   if (requests > 0) {
     const managers = await prisma.user.findMany({ where: { role: { in: ["team_lead", "admin"] } }, select: { id: true } });
-    await notifyUsers(
+    await alertUsers(
       managers.map((u) => u.id),
       { title: "Waiting for you", body: `${requests} new coach request${requests === 1 ? "" : "s"}.`, url: "/matching", tag: "daily" },
     );
     sent.managers += managers.length;
   }
 
-  return NextResponse.json({ ok: true, sent });
+  // Interns: "Hey, this is pending." What they promised, and board tasks with dates, due today, tomorrow, or late.
+  const today = dayKey(0);
+  const tomorrow = dayKey(1);
+  const endTomorrow = new Date(now.getTime() + 48 * 3_600_000);
+  const [commitments, tasks, interns] = await Promise.all([
+    prisma.internCommitment.findMany({
+      where: { status: "open", dueAt: { lt: endTomorrow } },
+      include: { intern: { include: { team: true } } },
+      orderBy: { dueAt: "asc" },
+    }),
+    prisma.internTask.findMany({ where: { status: { not: "done" }, dueOn: { not: "", lte: tomorrow }, assigneeId: { not: null } } }),
+    prisma.intern.findMany({ where: { status: "active" }, include: { user: { select: { id: true } } } }),
+  ]);
+  const chatLines: string[] = [];
+  for (const intern of interns) {
+    if (!intern.user) continue;
+    const lines: string[] = [];
+    for (const c of commitments.filter((c) => c.internId === intern.id)) {
+      const key = dueLabel(c.dueAt, now);
+      if (isOverdue(c, now)) {
+        lines.push(`Overdue: ${c.what} (was due ${key}). Finish it or move the date so your team knows.`);
+        chatLines.push(`⚠️ ${intern.firstName}: ${c.what} (was due ${key})`);
+      } else {
+        lines.push(`Due ${key}: ${c.what}`);
+        if (key.startsWith("today")) chatLines.push(`📌 ${intern.firstName}: ${c.what} (due ${key})`);
+      }
+    }
+    for (const t of tasks.filter((t) => t.assigneeId === intern.id)) {
+      lines.push(`${t.dueOn < today ? "Overdue task" : t.dueOn === today ? "Task due today" : "Task due tomorrow"}: ${t.title}`);
+    }
+    if (lines.length === 0) continue;
+    await alertUsers(
+      [intern.user.id],
+      {
+        title: "Hey, this is pending",
+        body: lines.length === 1 ? lines[0] : `${lines.length} things need you: ${lines[0]}`,
+        url: "/intern/commitments",
+        tag: "daily-intern",
+      },
+      { lines },
+    );
+    sent.interns += 1;
+  }
+  if (commitments.length) {
+    await prisma.internCommitment.updateMany({
+      where: { id: { in: commitments.map((c) => c.id) } },
+      data: { remindedAt: now },
+    });
+  }
+  // Optional: the same roundup in the program's Google Chat space (only first names and what they promised).
+  const chatPosted = chatLines.length
+    ? await postToGoogleChat(`*Today's commitments*\n${chatLines.join("\n")}\nUpdate yours: https://cm2-workspace.vercel.app/intern/commitments`)
+    : false;
+
+  return NextResponse.json({ ok: true, sent, chatPosted });
 }

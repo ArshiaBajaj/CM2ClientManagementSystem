@@ -10,6 +10,7 @@ import { getProgramSettings } from "@/lib/settings";
 import { CASELOAD_LABELS, getCaseload, type Caseload } from "@/lib/caseload";
 import { readFlash } from "@/lib/security";
 import { IdleSignOut } from "@/components/idle-sign-out";
+import { AlertsBanner } from "@/components/alerts-banner";
 
 type NavItem = { href: string; label: string };
 
@@ -31,6 +32,7 @@ const MANAGER_LINKS: NavItem[] = [
   { href: "/credits", label: "Credits" },
   { href: "/documents", label: "Documents" },
   { href: "/interns", label: "Interns" },
+  { href: "/intern/commitments", label: "Commitments" },
   { href: "/updates", label: "Website updates" },
   { href: "/settings", label: "Settings" },
 ];
@@ -63,6 +65,7 @@ const GUARDIAN_LINKS: NavItem[] = [
 const INTERN_LINKS: NavItem[] = [
   { href: "/intern", label: "Home" },
   { href: "/intern/tasks", label: "Tasks" },
+  { href: "/intern/commitments", label: "Commitments" },
   { href: "/intern/chat", label: "Team chat" },
   { href: "/intern/documents", label: "Documents" },
 ];
@@ -236,6 +239,7 @@ export async function Shell({
         </nav>
       </aside>
       <main id="main" className="page-enter mx-auto w-full max-w-6xl px-6 py-10">
+        {user ? <AlertsBanner /> : null}
         {flash ? (
           <p role="status" className="mb-6 rounded-lg border border-leaf/30 bg-leaf-soft px-4 py-3 text-sm text-ink">
             {flash}

@@ -8,6 +8,7 @@ import { hashPassword } from "@/lib/password";
 import { DEMO_EMAILS, audit, setFlash, temporaryPassword } from "@/lib/security";
 import { startFresh } from "@/lib/start-fresh";
 import { emailReady, sendWelcome, siteOrigin } from "@/lib/invite";
+import { postToGoogleChat } from "@/lib/alerts";
 import { ensureProgramChannels } from "@/lib/gate";
 
 function back(request: NextRequest, section: string, key: "notice" | "error", message: string) {
@@ -44,6 +45,22 @@ export async function POST(request: NextRequest) {
     await ensureProgramChannels();
     await audit("StartedFresh", "Program", "all", user.id);
     return back(request, "team", "notice", "Done. The portal is empty and ready. Add your coaches here, then interns and clients.");
+  }
+
+  if (intent === "google_chat") {
+    const url = String(form.get("googleChatWebhook") ?? "").trim();
+    if (url.includes("…(saved)")) return back(request, "googlechat", "notice", "No change");
+    if (url && !/^https:\/\/chat\.googleapis\.com\/v1\/spaces\/[^/]+\/messages\?/.test(url)) {
+      return back(request, "googlechat", "error", "That isn't a Google Chat webhook link");
+    }
+    await prisma.programSettings.update({ where: { id: "default" }, data: { googleChatWebhook: url } });
+    await audit("GoogleChatWebhookSaved", "ProgramSettings", "default", user.id, { on: Boolean(url) });
+    return back(request, "googlechat", "notice", url ? "Google Chat connected" : "Google Chat disconnected");
+  }
+
+  if (intent === "google_chat_test") {
+    const ok = await postToGoogleChat("👋 Coach Me 2 is connected. Daily intern reminders will post here each morning.");
+    return back(request, "googlechat", ok ? "notice" : "error", ok ? "Test posted. Check the space." : "Google Chat didn't accept it. Check the link.");
   }
 
   if (intent === "email_link") {

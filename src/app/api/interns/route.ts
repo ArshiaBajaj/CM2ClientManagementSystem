@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { notifyUsers } from "@/lib/push";
+import { detectCommitment } from "@/lib/commitments";
 import { audit, setFlash, temporaryPassword } from "@/lib/security";
 import { sendWelcome, siteOrigin } from "@/lib/invite";
 import { hashPassword } from "@/lib/password";
@@ -307,9 +308,28 @@ async function message(request: NextRequest, user: NonNullable<Awaited<ReturnTyp
     return go(request, "/workspace", "error", "Intern chat is for interns");
   }
 
-  await prisma.internMessage.create({
+  const posted = await prisma.internMessage.create({
     data: { channelId: channel.id, senderId: user.id, senderName: user.name, body: body.slice(0, 2000) },
   });
+  // "I'll send the flyer by Wednesday" becomes a commitment the team can see.
+  let saved: string | null = null;
+  const author = user.role === "intern" ? await internRecord(user) : null;
+  const promise = author && channel.kind !== "direct" ? detectCommitment(body) : null;
+  if (author && promise) {
+    await prisma.internCommitment.create({
+      data: {
+        internId: author.id,
+        teamId: author.teamId,
+        what: promise.what,
+        dueAt: promise.dueAt,
+        source: "chat",
+        channelName: channel.name,
+        messageId: posted.id,
+        createdById: user.id,
+      },
+    });
+    saved = `Saved to your commitments: ${promise.what}, due ${promise.when}`;
+  }
   // Notify the interns who can read this channel (not managers, to keep it quiet for them).
   const readers = await prisma.intern.findMany({
     where:
@@ -331,7 +351,7 @@ async function message(request: NextRequest, user: NonNullable<Awaited<ReturnTyp
   );
   const url = new URL(safeReturn, request.url);
   url.searchParams.set("channel", channel.key);
-  url.searchParams.set("notice", "Message sent");
+  url.searchParams.set("notice", saved ?? "Message sent");
   return NextResponse.redirect(url, 303);
 }
 

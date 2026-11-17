@@ -9,7 +9,7 @@ const WHAT_YOU_GET: Record<string, string[]> = {
   client: ["New messages from your coach", "A reminder on days you have a session", "An evening nudge if today's goals are still open"],
   guardian: ["Session reminders for your teen", "New documents to sign"],
   coach: ["New messages from your students", "Your sessions for the day, each morning", "New bookings"],
-  intern: ["New messages in your team chat and direct messages"],
+  intern: ["New messages in your team chat and direct messages", "A morning heads-up on anything you committed to that's due", "Nudges from teammates"],
   team_lead: ["New coach requests and website messages, each morning"],
   admin: ["New coach requests and website messages, each morning"],
 };
@@ -19,10 +19,13 @@ export default async function DevicesPage({ searchParams }: { searchParams: Prom
   const user = await getSession();
   if (!user) redirect("/login");
   const { notice } = await searchParams;
-  const record = await prisma.user.findUnique({ where: { id: user.id }, select: { calendarToken: true } });
+  const record = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { calendarToken: true, emailNotifications: true, email: true },
+  });
   const host = (await headers()).get("host") ?? "";
   const feedPath = record?.calendarToken ? `${host}/api/calendar/${record.calendarToken}.ics` : null;
-  const showCalendar = user.role !== "intern" && user.role !== "intern_parent";
+  const showCalendar = user.role !== "intern_parent";
 
   return (
     <Shell user={user} passwordGate={false}>
@@ -51,6 +54,14 @@ export default async function DevicesPage({ searchParams }: { searchParams: Prom
           <p className="mt-5 text-xs text-ink/50">
             Turn this on separately on each phone or computer you use. On iPhone, add Coach Me 2 to your Home Screen first.
           </p>
+          <form action="/api/account/alerts" method="post" className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-ink/10 pt-4">
+            <p className="text-sm text-ink/70">
+              Email reminders to <span className="font-medium text-ink">{record?.email}</span>:{" "}
+              <span className="font-semibold">{record?.emailNotifications ? "on" : "off"}</span>
+            </p>
+            <input type="hidden" name="email" value={record?.emailNotifications ? "off" : "on"} />
+            <button className="btn-secondary px-3 py-1.5 text-sm">{record?.emailNotifications ? "Turn off" : "Turn on"}</button>
+          </form>
         </section>
 
         {showCalendar ? (
@@ -58,16 +69,29 @@ export default async function DevicesPage({ searchParams }: { searchParams: Prom
             <p className="text-2xl" aria-hidden>
               📅
             </p>
-            <h2 className="mt-2 font-display text-xl font-semibold tracking-tight">Sessions in your calendar</h2>
+            <h2 className="mt-2 font-display text-xl font-semibold tracking-tight">
+              {user.role === "intern" ? "Commitments in your calendar" : "Sessions in your calendar"}
+            </h2>
             <p className="mt-2 text-sm text-ink/65">
-              Subscribe once and every session shows in Apple Calendar (and on your Apple Watch), Google Calendar, or
-              Outlook, with an alert 15 minutes before. It updates itself when sessions change.
+              {user.role === "intern"
+                ? "Subscribe once and everything you've committed to shows in Google Calendar or Apple Calendar on its due date, with a reminder. It updates itself."
+                : "Subscribe once and every session shows in Google Calendar, Apple Calendar (and on your Apple Watch), or Outlook, with an alert 15 minutes before. It updates itself when sessions change."}
             </p>
             {feedPath ? (
               <div className="mt-5 space-y-3">
-                <a href={`webcal://${feedPath}`} className="btn">
-                  Add to Apple Calendar
-                </a>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={`https://calendar.google.com/calendar/render?cid=${encodeURIComponent(`webcal://${feedPath}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn"
+                  >
+                    Add to Google Calendar
+                  </a>
+                  <a href={`webcal://${feedPath}`} className="btn-secondary">
+                    Add to Apple Calendar
+                  </a>
+                </div>
                 <label className="block text-sm font-medium">
                   Or copy this link into Google Calendar (Other calendars → From URL)
                   <input readOnly value={`https://${feedPath}`} className="field font-mono text-xs" />

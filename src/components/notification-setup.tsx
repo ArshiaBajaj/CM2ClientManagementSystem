@@ -2,12 +2,52 @@
 
 import { useEffect, useState } from "react";
 
-type State = "checking" | "unsupported" | "needs-home-screen" | "blocked" | "off" | "on" | "working";
+export type State = "checking" | "unsupported" | "needs-home-screen" | "blocked" | "off" | "on" | "working";
 
 function urlBase64ToUint8Array(base64: string) {
   const padded = `${base64}${"=".repeat((4 - (base64.length % 4)) % 4)}`.replace(/-/g, "+").replace(/_/g, "/");
   const raw = atob(padded);
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
+/** What this device can do right now: needs the Home Screen (iPhone), blocked, already on, or ready to turn on. */
+export async function deviceAlertState(): Promise<State> {
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const standalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as unknown as { standalone?: boolean }).standalone === true;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+    return ios && !standalone ? "needs-home-screen" : "unsupported";
+  }
+  if (Notification.permission === "denied") return "blocked";
+  const registration = await navigator.serviceWorker.register("/sw.js");
+  const existing = await registration.pushManager.getSubscription();
+  return existing ? "on" : "off";
+}
+
+/** Asks for permission and saves this device's subscription. */
+export async function subscribeThisDevice(): Promise<"on" | "off" | "blocked" | "error"> {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return permission === "denied" ? "blocked" : "off";
+    const { publicKey } = (await (await fetch("/api/push")).json()) as { publicKey: string };
+    const registration = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+    const subscription =
+      (await registration.pushManager.getSubscription()) ??
+      (await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      }));
+    const response = await fetch("/api/push", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "subscribe", subscription: subscription.toJSON() }),
+    });
+    return response.ok ? "on" : "error";
+  } catch {
+    return "error";
+  }
 }
 
 /** Turns phone (and Apple Watch) notifications on or off for this device. */
@@ -16,55 +56,23 @@ export function NotificationSetup() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    (async () => {
-      const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
-      const standalone =
-        window.matchMedia("(display-mode: standalone)").matches ||
-        (navigator as unknown as { standalone?: boolean }).standalone === true;
-      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-        setState(ios && !standalone ? "needs-home-screen" : "unsupported");
-        return;
-      }
-      if (Notification.permission === "denied") {
-        setState("blocked");
-        return;
-      }
-      const registration = await navigator.serviceWorker.register("/sw.js");
-      const existing = await registration.pushManager.getSubscription();
-      setState(existing ? "on" : "off");
-    })().catch(() => setState("unsupported"));
+    deviceAlertState()
+      .then(setState)
+      .catch(() => setState("unsupported"));
   }, []);
 
   async function turnOn() {
     setState("working");
     setMessage("");
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setState(permission === "denied" ? "blocked" : "off");
-        return;
-      }
-      const { publicKey } = (await (await fetch("/api/push")).json()) as { publicKey: string };
-      const registration = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-      const subscription =
-        (await registration.pushManager.getSubscription()) ??
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey),
-        }));
-      const response = await fetch("/api/push", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "subscribe", subscription: subscription.toJSON() }),
-      });
-      if (!response.ok) throw new Error("save failed");
-      setState("on");
-      setMessage("Notifications are on for this device.");
-    } catch {
-      setState("off");
-      setMessage("That didn't work. Try again, or check notification settings for this site.");
-    }
+    const result = await subscribeThisDevice();
+    setState(result === "error" ? "off" : result);
+    setMessage(
+      result === "on"
+        ? "Notifications are on for this device."
+        : result === "error"
+          ? "That didn't work. Try again, or check notification settings for this site."
+          : "",
+    );
   }
 
   async function turnOff() {
