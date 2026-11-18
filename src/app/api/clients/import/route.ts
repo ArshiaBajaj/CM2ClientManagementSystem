@@ -8,6 +8,9 @@ import { audit, temporaryPassword } from "@/lib/security";
 import { readClientRows, toCsv } from "@/lib/import-clients";
 import { sendWelcome, siteOrigin } from "@/lib/invite";
 
+// One welcome email per new login; give big imports time.
+export const maxDuration = 60;
+
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function back(request: NextRequest, message: string) {

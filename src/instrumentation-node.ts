@@ -1,5 +1,6 @@
 import { ensureSchema } from "@/lib/schema-upgrades";
 import { ensureProgramManagers } from "@/lib/managers";
+import { mergeDuplicateTeams } from "@/lib/gate";
 
 // Node.js only (see instrumentation.ts). Adds missing tables and columns (never removes anything),
 // then makes sure the program managers have Admin accounts.
@@ -13,5 +14,10 @@ if (process.env.DATABASE_URL) {
     await ensureProgramManagers();
   } catch (error) {
     console.error("Manager accounts check skipped:", error);
+  }
+  try {
+    await mergeDuplicateTeams();
+  } catch (error) {
+    console.error("Team cleanup skipped:", error);
   }
 }

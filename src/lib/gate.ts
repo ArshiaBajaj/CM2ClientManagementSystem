@@ -174,6 +174,54 @@ export async function ensureProgramChannels() {
   });
 }
 
+/** Reuses a team with the same name (ignoring case and spaces) instead of making a second one. */
+export async function findOrCreateTeam(name: string, focus = "", description = "") {
+  const clean = name.trim().replace(/\s+/g, " ");
+  const existing = await prisma.internTeam.findFirst({
+    where: { name: { equals: clean, mode: "insensitive" } },
+    orderBy: { createdAt: "asc" },
+  });
+  const team = existing ?? (await prisma.internTeam.create({ data: { name: clean, focus, description } }));
+  await ensureTeamChannel(team.id, team.name);
+  return team;
+}
+
+/**
+ * Folds teams that share a name into the oldest one: interns, tasks, documents, commitments, and team chat
+ * messages all move over. Safe to run any time.
+ */
+export async function mergeDuplicateTeams() {
+  const teams = await prisma.internTeam.findMany({ orderBy: { createdAt: "asc" } });
+  const groups = new Map<string, typeof teams>();
+  for (const t of teams) {
+    const key = t.name.trim().replace(/\s+/g, " ").toLowerCase();
+    groups.set(key, [...(groups.get(key) ?? []), t]);
+  }
+  let merged = 0;
+  for (const [, group] of groups) {
+    if (group.length < 2) continue;
+    const [keep, ...extras] = group;
+    await ensureTeamChannel(keep.id, keep.name);
+    const keepChannel = await prisma.internChannel.findUnique({ where: { key: `team:${keep.id}` } });
+    for (const extra of extras) {
+      await prisma.$transaction(async (tx) => {
+        await tx.intern.updateMany({ where: { teamId: extra.id }, data: { teamId: keep.id } });
+        await tx.internTask.updateMany({ where: { teamId: extra.id }, data: { teamId: keep.id } });
+        await tx.internDocument.updateMany({ where: { teamId: extra.id }, data: { teamId: keep.id } });
+        await tx.internCommitment.updateMany({ where: { teamId: extra.id }, data: { teamId: keep.id } });
+        const channels = await tx.internChannel.findMany({ where: { teamId: extra.id } });
+        for (const ch of channels) {
+          if (keepChannel) await tx.internMessage.updateMany({ where: { channelId: ch.id }, data: { channelId: keepChannel.id } });
+          await tx.internChannel.delete({ where: { id: ch.id } });
+        }
+        await tx.internTeam.delete({ where: { id: extra.id } });
+      });
+      merged += 1;
+    }
+  }
+  return merged;
+}
+
 export async function ensureTeamChannel(teamId: string, teamName: string) {
   await prisma.internChannel.upsert({
     where: { key: `team:${teamId}` },

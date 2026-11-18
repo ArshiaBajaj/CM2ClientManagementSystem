@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { Guide } from "@/components/guide";
 import { Notice, Shell } from "@/components/shell";
-import { accessOverview } from "@/lib/gate";
+import { accessOverview, mergeDuplicateTeams } from "@/lib/gate";
 import { fieldsToSpec, parseFields } from "@/lib/forms";
 import { prisma } from "@/lib/db";
 
@@ -17,6 +17,7 @@ export default async function InternsAdminPage({
   if (!user) redirect("/login");
   if (!isLeadOrAdmin(user)) redirect("/workspace");
   const { error, notice } = await searchParams;
+  await mergeDuplicateTeams();
   const [{ coaches, interns }, packets, teams] = await Promise.all([
     accessOverview(),
     prisma.accessPacket.findMany({ orderBy: [{ audience: "asc" }, { sortOrder: "asc" }] }),

@@ -8,7 +8,18 @@ import { audit, setFlash, temporaryPassword } from "@/lib/security";
 import { sendWelcome, siteOrigin } from "@/lib/invite";
 import { hashPassword } from "@/lib/password";
 import { nextInternPublicId } from "@/lib/ids";
-import { answersFromForm, ensureProgramChannels, ensureTeamChannel, internClearance, internRecord } from "@/lib/gate";
+import {
+  answersFromForm,
+  ensureProgramChannels,
+  ensureTeamChannel,
+  findOrCreateTeam,
+  internClearance,
+  internRecord,
+  mergeDuplicateTeams,
+} from "@/lib/gate";
+
+// Adding many interns sends a welcome email to each; give it time.
+export const maxDuration = 60;
 import { parseFieldSpec } from "@/lib/forms";
 
 function go(request: NextRequest, path: string, key: string, message: string) {
@@ -110,7 +121,7 @@ async function addIntern(
   });
   await recordFormsOnFile(intern.id, user);
   await audit("InternEnrolled", "Intern", intern.id, user.id);
-  return { temp, emailed: await sendWelcome(email, origin, user.name) };
+  return { temp, emailed: origin ? await sendWelcome(email, origin, user.name) : false };
 }
 
 async function pickTeam(form: FormData) {
@@ -119,7 +130,7 @@ async function pickTeam(form: FormData) {
   const newFocus = String(form.get("newFocus") ?? "").trim();
   await ensureProgramChannels();
   const team = newTeam
-    ? await prisma.internTeam.create({ data: { name: newTeam, focus: newFocus } })
+    ? await findOrCreateTeam(newTeam, newFocus)
     : teamId
       ? await prisma.internTeam.findUnique({ where: { id: teamId } })
       : null;
@@ -167,6 +178,7 @@ async function enrollMany(request: NextRequest, user: Session, form: FormData) {
 
   const added: string[] = [];
   const emailed: string[] = [];
+  const created: { email: string; temp: string }[] = [];
   const origin = siteOrigin(request.url);
   const skipped: string[] = [];
   for (const line of lines) {
@@ -174,11 +186,20 @@ async function enrollMany(request: NextRequest, user: Session, form: FormData) {
     const email = parts.find((p) => EMAIL.test(p)) ?? "";
     const name = parts.filter((p) => p !== email).join(" ").trim() || email.split("@")[0];
     const [firstName, ...rest] = name.split(/\s+/);
-    const result = await addIntern(user, origin, team.id, { firstName: firstName ?? "", lastName: rest.join(" "), email });
+    // Create everyone first; welcome emails go out together below, so the page answers quickly.
+    const result = await addIntern(user, "", team.id, { firstName: firstName ?? "", lastName: rest.join(" "), email });
     if ("error" in result) skipped.push(`${line} (${result.error})`);
-    else if (result.emailed) emailed.push(email);
-    else added.push(`${email} · ${result.temp}`);
+    else created.push({ email, temp: result.temp });
   }
+  const queue = [...created];
+  await Promise.all(
+    Array.from({ length: 4 }, async () => {
+      for (let next = queue.shift(); next; next = queue.shift()) {
+        if (await sendWelcome(next.email, origin, user.name)) emailed.push(next.email);
+        else added.push(`${next.email} · ${next.temp}`);
+      }
+    }),
+  );
   if (added.length) {
     await setFlash(`Shown once, share them privately. Temporary passwords:  ${added.join("  |  ")}`);
   }
@@ -195,8 +216,7 @@ async function createTeam(request: NextRequest, user: NonNullable<Awaited<Return
   const focus = String(form.get("focus") ?? "").trim();
   const description = String(form.get("description") ?? "").trim();
   if (!name) return go(request, "/interns", "error", "Team name is required");
-  const team = await prisma.internTeam.create({ data: { name, focus, description } });
-  await ensureTeamChannel(team.id, team.name);
+  await findOrCreateTeam(name, focus, description);
   await ensureProgramChannels();
   return go(request, "/interns", "notice", `${name} is ready for interns`);
 }
