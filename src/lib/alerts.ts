@@ -30,11 +30,18 @@ ${lines.length > 1 ? `<ul style="padding-left:18px">${lines.map((l) => `<li styl
   }
 }
 
-/** Posts a plain message to the program's Google Chat space, if a manager connected one in Settings. */
-export async function postToGoogleChat(text: string) {
-  const settings = await prisma.programSettings.findUnique({ where: { id: "default" }, select: { googleChatWebhook: true } });
-  const url = settings?.googleChatWebhook ?? "";
-  if (!url.startsWith("https://chat.googleapis.com/")) return false;
+export const CHAT_WEBHOOK = /^https:\/\/chat\.googleapis\.com\/v1\/spaces\/[^/]+\/messages\?/;
+
+/**
+ * Posts a plain message to Google Chat: to a given space webhook, or to the program-wide space a manager
+ * connected in Settings.
+ */
+export async function postToGoogleChat(text: string, webhook?: string) {
+  const settings = webhook
+    ? null
+    : await prisma.programSettings.findUnique({ where: { id: "default" }, select: { googleChatWebhook: true } });
+  const url = webhook ?? settings?.googleChatWebhook ?? "";
+  if (!CHAT_WEBHOOK.test(url)) return false;
   try {
     const response = await fetch(url, {
       method: "POST",
@@ -45,4 +52,11 @@ export async function postToGoogleChat(text: string) {
   } catch {
     return false;
   }
+}
+
+/** Posts to an intern team's own Google Chat space, if it has one connected. */
+export async function postToTeamChat(teamId: string | null | undefined, text: string) {
+  if (!teamId) return false;
+  const team = await prisma.internTeam.findUnique({ where: { id: teamId }, select: { chatWebhook: true } });
+  return team?.chatWebhook ? postToGoogleChat(text, team.chatWebhook) : false;
 }

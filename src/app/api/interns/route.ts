@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { notifyUsers } from "@/lib/push";
 import { detectCommitment } from "@/lib/commitments";
 import { remindNotSignedIn } from "@/lib/follow-ups";
+import { CHAT_WEBHOOK, postToGoogleChat, postToTeamChat } from "@/lib/alerts";
 import { audit, setFlash, temporaryPassword } from "@/lib/security";
 import { sendWelcome, siteOrigin } from "@/lib/invite";
 import { hashPassword } from "@/lib/password";
@@ -53,6 +54,25 @@ export async function POST(request: NextRequest) {
   if (intent === "direct") return startDirect(request, user, form);
   if (intent === "on-file") return formsOnFile(request, user, form);
   if (intent === "move-team") return moveTeam(request, user, form);
+  if (intent === "team-chat" || intent === "team-chat-test") {
+    if (!isLeadOrAdmin(user)) return go(request, "/interns", "error", "Managers only");
+    const team = await prisma.internTeam.findUnique({ where: { id: String(form.get("teamId") ?? "") } });
+    if (!team) return go(request, "/interns", "error", "Team not found");
+    if (intent === "team-chat-test") {
+      const ok = await postToGoogleChat(
+        `👋 Coach Me 2 is connected to ${team.name}. Commitments and a morning roundup will post here.`,
+        team.chatWebhook,
+      );
+      return go(request, "/interns", ok ? "notice" : "error", ok ? `Test posted to ${team.name}'s space` : "Google Chat didn't accept it. Check the link.");
+    }
+    const url = String(form.get("webhook") ?? "").trim();
+    if (url.includes("…(saved)")) return go(request, "/interns", "notice", "No change");
+    if (url && !CHAT_WEBHOOK.test(url)) return go(request, "/interns", "error", "That isn't a Google Chat webhook link");
+    await prisma.internTeam.update({ where: { id: team.id }, data: { chatWebhook: url } });
+    await audit("TeamChatWebhookSaved", "InternTeam", team.id, user.id, { on: Boolean(url) });
+    if (url) await postToGoogleChat(`👋 Coach Me 2 is connected to ${team.name}. Commitments and a morning roundup will post here.`, url);
+    return go(request, "/interns", "notice", url ? `${team.name} is connected to Google Chat` : `${team.name} disconnected from Google Chat`);
+  }
   if (intent === "remind-signin") {
     if (!isLeadOrAdmin(user)) return go(request, "/interns", "error", "Managers only");
     const sentTo = await remindNotSignedIn(siteOrigin(request.url), { force: true, role: "intern" });
@@ -361,6 +381,7 @@ async function message(request: NextRequest, user: NonNullable<Awaited<ReturnTyp
       },
     });
     saved = `Saved to your commitments: ${promise.what}, due ${promise.when}`;
+    await postToTeamChat(author.teamId, `📌 ${author.firstName} committed: ${promise.what} (due ${promise.when})`);
   }
   // Notify the interns who can read this channel (not managers, to keep it quiet for them).
   const readers = await prisma.intern.findMany({

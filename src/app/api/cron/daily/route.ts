@@ -162,5 +162,27 @@ export async function GET(request: NextRequest) {
     ? await postToGoogleChat(`${chatParts.join("\n\n")}\n\nUpdate yours: ${origin}/intern/commitments`)
     : false;
 
-  return NextResponse.json({ ok: true, sent, reInvited: reInvited.length, phonePrompted: phonePrompted.length, chatPosted });
+  // Each team with its own Google Chat space gets its own roundup.
+  const chatTeams = await prisma.internTeam.findMany({ where: { chatWebhook: { not: "" } }, include: { interns: { include: { user: true } } } });
+  let teamPosts = 0;
+  for (const team of chatTeams) {
+    const ids = new Set(team.interns.map((i) => i.id));
+    const lines: string[] = [];
+    for (const c of commitments.filter((c) => ids.has(c.internId))) {
+      const key = dueLabel(c.dueAt, now);
+      if (isOverdue(c, now)) lines.push(`⚠️ ${c.intern.firstName}: ${c.what} (was due ${key})`);
+      else if (key.startsWith("today")) lines.push(`📌 ${c.intern.firstName}: ${c.what} (due ${key})`);
+      else lines.push(`🗓️ ${c.intern.firstName}: ${c.what} (due ${key})`);
+    }
+    const notIn = team.interns.filter((i) => i.user && !i.user.lastLoginAt).map((i) => i.firstName);
+    const parts = [
+      lines.length ? `*${team.name}: today's commitments*\n${lines.join("\n")}` : "",
+      notIn.length ? `*Not signed in yet:* ${notIn.join(", ")}. It takes 2 minutes: ${origin}` : "",
+    ].filter(Boolean);
+    if (parts.length && (await postToGoogleChat(`${parts.join("\n\n")}\n\nUpdate yours: ${origin}/intern/commitments`, team.chatWebhook))) {
+      teamPosts += 1;
+    }
+  }
+
+  return NextResponse.json({ ok: true, sent, reInvited: reInvited.length, phonePrompted: phonePrompted.length, chatPosted, teamPosts });
 }

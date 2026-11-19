@@ -198,7 +198,29 @@ export default async function InternsAdminPage({
                 <p className="font-medium">{team.name}</p>
                 <p className="text-sm text-ink/50">
                   {team.focus || "No focus yet"} · {team.interns.length} intern{team.interns.length === 1 ? "" : "s"}
+                  {team.chatWebhook ? " · 💬 Google Chat connected" : ""}
                 </p>
+                <form action="/api/interns" method="post" className="mt-2 flex flex-wrap items-end gap-2">
+                  <input type="hidden" name="teamId" value={team.id} />
+                  <label className="block min-w-48 flex-1 text-xs font-medium text-ink/70">
+                    Google Chat space webhook
+                    <input
+                      name="webhook"
+                      type="url"
+                      defaultValue={team.chatWebhook ? "https://chat.googleapis.com/…(saved)" : ""}
+                      placeholder="https://chat.googleapis.com/v1/spaces/…"
+                      className="field mt-1 py-1.5 text-sm"
+                    />
+                  </label>
+                  <button name="intent" value="team-chat" className="btn-secondary px-3 py-1.5 text-sm">
+                    Save
+                  </button>
+                  {team.chatWebhook ? (
+                    <button name="intent" value="team-chat-test" className="btn-ghost px-3 py-1.5 text-sm">
+                      Send a test
+                    </button>
+                  ) : null}
+                </form>
               </li>
             ))}
           </ul>

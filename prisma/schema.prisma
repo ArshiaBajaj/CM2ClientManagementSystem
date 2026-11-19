@@ -615,6 +615,8 @@ model InternTeam {
   name        String
   focus       String           @default("")
   description String           @default("")
+  /// This team's Google Chat space webhook: its commitments and morning roundup post there.
+  chatWebhook String           @default("")
   createdAt   DateTime         @default(now())
   interns     Intern[]
   channels    InternChannel[]
