@@ -58,6 +58,10 @@ const STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS "InternCommitment_internId_status_idx" ON "InternCommitment"("internId", "status")`,
   `CREATE INDEX IF NOT EXISTS "InternCommitment_status_dueAt_idx" ON "InternCommitment"("status", "dueAt")`,
+  // Sign-in and notification follow-ups
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "inviteReminders" INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "inviteReminderAt" TIMESTAMP(3)`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "pushPromptAt" TIMESTAMP(3)`,
   // World View
   `ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "country" TEXT`,
   `ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "worldOptIn" BOOLEAN NOT NULL DEFAULT false`,

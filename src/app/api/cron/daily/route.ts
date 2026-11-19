@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { alertUsers, postToGoogleChat } from "@/lib/alerts";
 import { dueLabel, isOverdue, localParts } from "@/lib/commitments";
+import { internsNotSignedIn, promptPhoneNotifications, remindNotSignedIn } from "@/lib/follow-ups";
+import { httpsUrl } from "@/lib/public-url";
+
+export const maxDuration = 60;
 
 /** YYYY-MM-DD in the program's time zone, `days` from now. */
 function dayKey(days = 0) {
@@ -143,10 +147,20 @@ export async function GET(request: NextRequest) {
       data: { remindedAt: now },
     });
   }
-  // Optional: the same roundup in the program's Google Chat space (only first names and what they promised).
-  const chatPosted = chatLines.length
-    ? await postToGoogleChat(`*Today's commitments*\n${chatLines.join("\n")}\nUpdate yours: https://cm2-workspace.vercel.app/intern/commitments`)
+  // Chase anyone who hasn't signed in (fresh link on day 1, 3, 7), and nudge signed-in people to turn on notifications.
+  const origin = httpsUrl(process.env.APP_URL) ?? "https://cm2-workspace.vercel.app";
+  const reInvited = await remindNotSignedIn(origin);
+  const phonePrompted = await promptPhoneNotifications(origin);
+
+  // Optional: the same roundup in the program's Google Chat space (first names only, never client information).
+  const waiting = await internsNotSignedIn();
+  const chatParts = [
+    chatLines.length ? `*Today's commitments*\n${chatLines.join("\n")}` : "",
+    waiting.length ? `*Not signed in to the intern workspace yet:* ${waiting.join(", ")}. It takes 2 minutes: ${origin}` : "",
+  ].filter(Boolean);
+  const chatPosted = chatParts.length
+    ? await postToGoogleChat(`${chatParts.join("\n\n")}\n\nUpdate yours: ${origin}/intern/commitments`)
     : false;
 
-  return NextResponse.json({ ok: true, sent, chatPosted });
+  return NextResponse.json({ ok: true, sent, reInvited: reInvited.length, phonePrompted: phonePrompted.length, chatPosted });
 }

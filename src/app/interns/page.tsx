@@ -107,8 +107,17 @@ export default async function InternsAdminPage({
             <span className="font-semibold text-ink">
               {signedIn} of {interns.length} signed in · {phoneOn} with phone notifications on.
             </span>{" "}
-            Green badges mean the forms are on file and the workspace is open.
+            Green badges mean the forms are on file and the workspace is open. Anyone not signed in gets a reminder email
+            automatically after 1, 3, and 7 days.
           </p>
+          {signedIn < interns.length ? (
+            <form action="/api/interns" method="post">
+              <input type="hidden" name="intent" value="remind-signin" />
+              <button className="btn-secondary px-3 py-1.5 text-sm">
+                Email the {interns.length - signedIn} who haven&apos;t signed in
+              </button>
+            </form>
+          ) : null}
           {interns.some((i) => !i.internDone || !i.parentDone) ? (
             <form action="/api/interns" method="post">
               <input type="hidden" name="intent" value="on-file" />

@@ -73,7 +73,7 @@ const escape = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)}
  * Emails one person a welcome with a fresh one-time "set your password" link. Any earlier link stops working.
  * Returns false (and changes nothing) when email isn't set up or the send fails.
  */
-export async function sendWelcome(email: string, origin: string, invitedBy: string) {
+export async function sendWelcome(email: string, origin: string, invitedBy: string, opts: { reminder?: boolean } = {}) {
   if (!emailReady()) return false;
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user) return false;
@@ -83,11 +83,11 @@ export async function sendWelcome(email: string, origin: string, invitedBy: stri
   const first = user.name.split(/\s+/)[0] || "there";
   const what = ROLE_WORDS[user.role] ?? "the Coach Me 2 portal";
   const google = googleEnabled();
-  const subject = "You're invited to Coach Me 2";
+  const subject = opts.reminder ? "Reminder: your Coach Me 2 account is waiting" : "You're invited to Coach Me 2";
   const text = [
     `Hi ${first},`,
     ``,
-    `${invitedBy} added you to ${what}.`,
+    opts.reminder ? `Just a reminder: ${invitedBy} added you to ${what}, and you haven't signed in yet.` : `${invitedBy} added you to ${what}.`,
     ``,
     `Set your password and sign in here (link works for ${INVITE_DAYS} days):`,
     link,
@@ -99,7 +99,7 @@ export async function sendWelcome(email: string, origin: string, invitedBy: stri
   ].join("\n");
   const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#16202b;max-width:520px">
 <p>Hi ${escape(first)},</p>
-<p>${escape(invitedBy)} added you to ${escape(what)}.</p>
+<p>${opts.reminder ? `Just a reminder: ${escape(invitedBy)} added you to ${escape(what)}, and you haven't signed in yet. It takes two minutes.` : `${escape(invitedBy)} added you to ${escape(what)}.`}</p>
 <p style="margin:28px 0"><a href="${link}" style="background:#16202b;color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:600">Set your password</a></p>
 <p style="color:#555;font-size:13px">The button works for ${INVITE_DAYS} days.${
     google ? ` You can also go to <a href="${origin}">${escape(origin.replace(/^https?:\/\//, ""))}</a> and click <b>Sign in with Google</b> using ${escape(user.email)}.` : ""

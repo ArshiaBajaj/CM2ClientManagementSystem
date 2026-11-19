@@ -26,6 +26,11 @@ model User {
   inviteExpiresAt DateTime?
   /// Reminders also go to this person's email (on unless they turn it off).
   emailNotifications Boolean @default(true)
+  /// Follow-up welcome emails sent to someone who hasn't signed in yet (stops after 3).
+  inviteReminders Int @default(0)
+  inviteReminderAt DateTime?
+  /// When we emailed a signed-in person who hasn't turned on phone notifications.
+  pushPromptAt DateTime?
   lastLoginAt DateTime?
   createdAt DateTime @default(now())
 }

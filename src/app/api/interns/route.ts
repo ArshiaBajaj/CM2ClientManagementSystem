@@ -4,6 +4,7 @@ import { isLeadOrAdmin } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { notifyUsers } from "@/lib/push";
 import { detectCommitment } from "@/lib/commitments";
+import { remindNotSignedIn } from "@/lib/follow-ups";
 import { audit, setFlash, temporaryPassword } from "@/lib/security";
 import { sendWelcome, siteOrigin } from "@/lib/invite";
 import { hashPassword } from "@/lib/password";
@@ -52,6 +53,16 @@ export async function POST(request: NextRequest) {
   if (intent === "direct") return startDirect(request, user, form);
   if (intent === "on-file") return formsOnFile(request, user, form);
   if (intent === "move-team") return moveTeam(request, user, form);
+  if (intent === "remind-signin") {
+    if (!isLeadOrAdmin(user)) return go(request, "/interns", "error", "Managers only");
+    const sentTo = await remindNotSignedIn(siteOrigin(request.url), { force: true, role: "intern" });
+    return go(
+      request,
+      "/interns",
+      sentTo.length ? "notice" : "error",
+      sentTo.length ? `Reminder emailed to ${sentTo.length} intern${sentTo.length === 1 ? "" : "s"} who haven't signed in` : "Everyone has signed in, or email isn't set up",
+    );
+  }
   if (intent === "document") return shareDocument(request, user, form);
   if (intent === "task") return createTask(request, user, form);
   if (intent === "task-status") return moveTask(request, user, form);
