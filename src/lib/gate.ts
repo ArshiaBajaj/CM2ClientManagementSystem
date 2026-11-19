@@ -206,6 +206,11 @@ export async function mergeDuplicateTeams() {
     for (const extra of extras) {
       await prisma.$transaction(async (tx) => {
         await tx.intern.updateMany({ where: { teamId: extra.id }, data: { teamId: keep.id } });
+        await tx.$executeRawUnsafe(
+          `UPDATE "Intern" SET "extraTeamIds" = replace("extraTeamIds", $1, $2) WHERE "extraTeamIds" LIKE '%' || $1 || '%'`,
+          extra.id,
+          keep.id,
+        );
         await tx.internTask.updateMany({ where: { teamId: extra.id }, data: { teamId: keep.id } });
         await tx.internDocument.updateMany({ where: { teamId: extra.id }, data: { teamId: keep.id } });
         await tx.internCommitment.updateMany({ where: { teamId: extra.id }, data: { teamId: keep.id } });
@@ -264,7 +269,19 @@ export async function accessOverview() {
   };
 }
 
-/** Tasks an intern may see: their team, plus anything shared with every intern. */
-export function visibleTaskWhere(teamId: string) {
-  return { OR: [{ teamId: null }, { teamId }] };
+/** Every team an intern is on: their main team first, then any extra teams. */
+export function teamIdsOf(intern: { teamId: string; extraTeamIds?: string | null }) {
+  const extra = (intern.extraTeamIds ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return [intern.teamId, ...extra.filter((id) => id !== intern.teamId)];
+}
+
+/** Interns on a team, counting people for whom it's an extra team. */
+export function onTeamWhere(teamId: string) {
+  return { OR: [{ teamId }, { extraTeamIds: { contains: teamId } }] };
+}
+
+/** Tasks an intern may see: their teams, plus anything shared with every intern. */
+export function visibleTaskWhere(teamIds: string | string[]) {
+  const ids = Array.isArray(teamIds) ? teamIds : [teamIds];
+  return { OR: [{ teamId: null }, { teamId: { in: ids } }] };
 }

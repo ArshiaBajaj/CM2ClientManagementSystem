@@ -4,7 +4,7 @@ import { isLeadOrAdmin } from "@/lib/access";
 import { prisma } from "@/lib/db";
 import { alertUsers, postToTeamChat } from "@/lib/alerts";
 import { dueLabel, endOfLocalDay } from "@/lib/commitments";
-import { internClearance, internRecord } from "@/lib/gate";
+import { internClearance, internRecord, teamIdsOf } from "@/lib/gate";
 import { audit } from "@/lib/security";
 
 const PAGE = "/intern/commitments";
@@ -55,14 +55,14 @@ export async function POST(request: NextRequest) {
   });
   if (!commitment) return go(request, "error", "That commitment is gone");
   const mine = me?.id === commitment.internId;
-  const sameTeam = me?.teamId === commitment.intern.teamId;
+  const sameTeam = Boolean(me && teamIdsOf(me).includes(commitment.teamId ?? commitment.intern.teamId));
   if (!manager && !mine && !(intent === "nudge" && sameTeam)) return go(request, "error", "That one isn't yours");
 
   if (intent === "done") {
     await prisma.internCommitment.update({ where: { id: commitment.id }, data: { status: "done", doneAt: new Date() } });
     const late = commitment.dueAt.getTime() < Date.now();
     await postToTeamChat(
-      commitment.intern.teamId,
+      commitment.teamId ?? commitment.intern.teamId,
       `✅ ${commitment.intern.firstName} finished: ${commitment.what}${late ? " (a little late)" : ""}`,
     );
     return go(request, "notice", `Done: ${commitment.what}. Nice work!`);
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       data: { dueAt, status: "open", timesMoved: { increment: 1 }, remindedAt: null, overdueAt: null },
     });
     await postToTeamChat(
-      commitment.intern.teamId,
+      commitment.teamId ?? commitment.intern.teamId,
       `🔁 ${commitment.intern.firstName} moved "${commitment.what}" to ${dueLabel(dueAt)}`,
     );
     return go(request, "notice", `Moved to ${dueLabel(dueAt)}. Your team can see the new date.`);

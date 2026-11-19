@@ -18,6 +18,7 @@ import {
   internClearance,
   internRecord,
   mergeDuplicateTeams,
+  teamIdsOf,
 } from "@/lib/gate";
 
 // Adding many interns sends a welcome email to each; give it time.
@@ -54,6 +55,21 @@ export async function POST(request: NextRequest) {
   if (intent === "direct") return startDirect(request, user, form);
   if (intent === "on-file") return formsOnFile(request, user, form);
   if (intent === "move-team") return moveTeam(request, user, form);
+  if (intent === "set-teams") {
+    if (!isLeadOrAdmin(user)) return go(request, "/interns", "error", "Managers only");
+    const intern = await prisma.intern.findUnique({ where: { id: String(form.get("internId") ?? "") } });
+    const picked = form.getAll("teams").map(String);
+    const valid = (await prisma.internTeam.findMany({ where: { id: { in: picked } } })).map((t) => t.id);
+    if (!intern || valid.length === 0) return go(request, "/interns", "error", "Pick at least one team");
+    const main = valid.includes(intern.teamId) ? intern.teamId : valid[0];
+    await prisma.intern.update({
+      where: { id: intern.id },
+      data: { teamId: main, extraTeamIds: valid.filter((id) => id !== main).join(",") },
+    });
+    for (const team of await prisma.internTeam.findMany({ where: { id: { in: valid } } })) await ensureTeamChannel(team.id, team.name);
+    await audit("InternTeamsChanged", "Intern", intern.id, user.id, { teams: valid });
+    return go(request, "/interns", "notice", `${intern.firstName}'s teams are saved`);
+  }
   if (intent === "team-chat" || intent === "team-chat-test") {
     if (!isLeadOrAdmin(user)) return go(request, "/interns", "error", "Managers only");
     const team = await prisma.internTeam.findUnique({ where: { id: String(form.get("teamId") ?? "") } });
@@ -354,7 +370,9 @@ async function message(request: NextRequest, user: NonNullable<Awaited<ReturnTyp
     const allowed =
       channel.kind === "all" ||
       channel.kind === "between" ||
-      (channel.kind === "direct" ? channel.memberIds.split(",").includes(intern.id) : channel.teamId === intern.teamId);
+      (channel.kind === "direct"
+        ? channel.memberIds.split(",").includes(intern.id)
+        : teamIdsOf(intern).includes(channel.teamId ?? ""));
     if (!allowed) return go(request, "/intern/chat", "error", "That channel is for another team");
   } else {
     return go(request, "/workspace", "error", "Intern chat is for interns");
@@ -371,7 +389,8 @@ async function message(request: NextRequest, user: NonNullable<Awaited<ReturnTyp
     await prisma.internCommitment.create({
       data: {
         internId: author.id,
-        teamId: author.teamId,
+        // The team whose chat it was said in; their Google Chat space hears about it.
+        teamId: channel.kind === "team" && channel.teamId ? channel.teamId : author.teamId,
         what: promise.what,
         dueAt: promise.dueAt,
         source: "chat",
@@ -381,7 +400,7 @@ async function message(request: NextRequest, user: NonNullable<Awaited<ReturnTyp
       },
     });
     saved = `Saved to your commitments: ${promise.what}, due ${promise.when}`;
-    await postToTeamChat(author.teamId, `📌 ${author.firstName} committed: ${promise.what} (due ${promise.when})`);
+    await postToTeamChat(channel.kind === "team" && channel.teamId ? channel.teamId : author.teamId, `📌 ${author.firstName} committed: ${promise.what} (due ${promise.when})`);
   }
   // Notify the interns who can read this channel (not managers, to keep it quiet for them).
   const readers = await prisma.intern.findMany({
@@ -486,7 +505,7 @@ async function shareDocument(request: NextRequest, user: NonNullable<Awaited<Ret
   } else if (user.role === "intern") {
     const intern = await internRecord(user);
     if (!intern || !(await internClearance(intern.id)).ready) return go(request, "/intern/start", "error", "Finish the forms first");
-    teamId = audience === "all" ? null : intern.teamId;
+    teamId = audience === "all" ? null : teamIdsOf(intern).includes(audience) ? audience : intern.teamId;
   } else {
     return go(request, "/workspace", "error", "Interns share these documents");
   }
@@ -512,7 +531,7 @@ async function loadVisibleTask(id: string, actor: NonNullable<Awaited<ReturnType
   if (!task) return null;
   if (actor.manager) return task;
   if (!actor.intern) return null;
-  if (task.teamId && task.teamId !== actor.intern.teamId) return null;
+  if (task.teamId && !teamIdsOf(actor.intern).includes(task.teamId)) return null;
   return task;
 }
 
@@ -540,14 +559,14 @@ async function createTask(request: NextRequest, user: NonNullable<Awaited<Return
       if (!team) return go(request, "/intern/tasks", "error", "Choose a team or all interns");
       teamId = team.id;
     } else {
-      teamId = actor.intern!.teamId;
+      teamId = teamIdsOf(actor.intern!).includes(audience) ? audience : actor.intern!.teamId;
     }
   }
 
   if (assigneeId) {
     const assignee = await prisma.intern.findUnique({ where: { id: assigneeId } });
     if (!assignee) return go(request, "/intern/tasks", "error", "That intern is not on the roster");
-    if (teamId && assignee.teamId !== teamId) {
+    if (teamId && !teamIdsOf(assignee).includes(teamId)) {
       return go(request, "/intern/tasks", "error", "Assign a team task to someone on that team");
     }
   }

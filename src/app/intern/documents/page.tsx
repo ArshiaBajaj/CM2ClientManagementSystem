@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { Notice, Shell } from "@/components/shell";
-import { internClearance, internRecord } from "@/lib/gate";
+import { internClearance, internRecord, teamIdsOf } from "@/lib/gate";
 import { prisma } from "@/lib/db";
 
 export default async function InternDocumentsPage({
@@ -23,11 +23,11 @@ export default async function InternDocumentsPage({
 
   const { error, notice } = await searchParams;
   const documents = await prisma.internDocument.findMany({
-    where: manager ? {} : { OR: [{ teamId: null }, { teamId: intern?.teamId ?? "" }] },
+    where: manager ? {} : { OR: [{ teamId: null }, { teamId: { in: intern ? teamIdsOf(intern) : [] } }] },
     include: { team: true },
     orderBy: { createdAt: "desc" },
   });
-  const teams = manager ? await prisma.internTeam.findMany({ orderBy: { name: "asc" } }) : [];
+  const teams = await prisma.internTeam.findMany({ orderBy: { name: "asc" } });
 
   return (
     <Shell user={user}>
@@ -51,13 +51,23 @@ export default async function InternDocumentsPage({
         <label className="block text-sm font-medium">
           Who can read it
           <select name="audience" className="field">
-            {intern ? <option value="team">My team · {intern.team.name}</option> : null}
+            {intern
+              ? teams
+                  .filter((team) => teamIdsOf(intern).includes(team.id))
+                  .map((team) => (
+                    <option key={`mine-${team.id}`} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))
+              : null}
             <option value="all">All interns</option>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name} only
-              </option>
-            ))}
+            {manager
+              ? teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name} only
+                  </option>
+                ))
+              : null}
           </select>
         </label>
         <label className="block text-sm font-medium">

@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { Guide } from "@/components/guide";
 import { Shell } from "@/components/shell";
-import { internClearance, internRecord, visibleTaskWhere } from "@/lib/gate";
+import { internClearance, internRecord, visibleTaskWhere, teamIdsOf } from "@/lib/gate";
 import { prisma } from "@/lib/db";
 
 export default async function InternHomePage() {
@@ -21,17 +21,17 @@ export default async function InternHomePage() {
   const [teams, documents, channels, tasks] = await Promise.all([
     prisma.internTeam.findMany({ include: { interns: { orderBy: { firstName: "asc" } } }, orderBy: { name: "asc" } }),
     prisma.internDocument.findMany({
-      where: { OR: [{ teamId: null }, { teamId: intern.teamId }] },
+      where: { OR: [{ teamId: null }, { teamId: { in: teamIdsOf(intern) } }] },
       orderBy: { createdAt: "desc" },
       take: 4,
       include: { team: true },
     }),
     prisma.internChannel.findMany({
-      where: { OR: [{ kind: { in: ["all", "between"] } }, { teamId: intern.teamId }] },
+      where: { OR: [{ kind: { in: ["all", "between"] } }, { teamId: { in: teamIdsOf(intern) } }] },
       include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
     }),
     prisma.internTask.findMany({
-      where: { ...visibleTaskWhere(intern.teamId), status: { not: "done" } },
+      where: { ...visibleTaskWhere(teamIdsOf(intern)), status: { not: "done" } },
       include: { assignee: true, team: true },
       orderBy: { updatedAt: "desc" },
       take: 5,
@@ -68,7 +68,7 @@ export default async function InternHomePage() {
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h3 className="font-medium">
                     {team.name}
-                    {team.id === intern.teamId ? <span className="ml-2 text-xs text-accent">Your team</span> : null}
+                    {teamIdsOf(intern).includes(team.id) ? <span className="ml-2 text-xs text-accent">Your team</span> : null}
                   </h3>
                   <p className="text-xs uppercase tracking-[0.14em] text-ink/40">{team.focus}</p>
                 </div>

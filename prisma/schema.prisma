@@ -638,6 +638,8 @@ model Intern {
   status      String     @default("pending")
   user        User?
   tasks       InternTask[]
+  /// Other teams this intern is also on (comma-separated team ids). `teamId` is their main team.
+  extraTeamIds String     @default("")
   commitments InternCommitment[]
   createdAt   DateTime   @default(now())
 }

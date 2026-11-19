@@ -4,6 +4,7 @@ import { alertUsers, postToGoogleChat } from "@/lib/alerts";
 import { dueLabel, isOverdue, localParts } from "@/lib/commitments";
 import { internsNotSignedIn, promptPhoneNotifications, remindNotSignedIn } from "@/lib/follow-ups";
 import { httpsUrl } from "@/lib/public-url";
+import { onTeamWhere } from "@/lib/gate";
 
 export const maxDuration = 60;
 
@@ -163,18 +164,18 @@ export async function GET(request: NextRequest) {
     : false;
 
   // Each team with its own Google Chat space gets its own roundup.
-  const chatTeams = await prisma.internTeam.findMany({ where: { chatWebhook: { not: "" } }, include: { interns: { include: { user: true } } } });
+  const chatTeams = await prisma.internTeam.findMany({ where: { chatWebhook: { not: "" } } });
   let teamPosts = 0;
   for (const team of chatTeams) {
-    const ids = new Set(team.interns.map((i) => i.id));
+    const members = await prisma.intern.findMany({ where: onTeamWhere(team.id), include: { user: true } });
     const lines: string[] = [];
-    for (const c of commitments.filter((c) => ids.has(c.internId))) {
+    for (const c of commitments.filter((c) => (c.teamId ?? c.intern.teamId) === team.id)) {
       const key = dueLabel(c.dueAt, now);
       if (isOverdue(c, now)) lines.push(`⚠️ ${c.intern.firstName}: ${c.what} (was due ${key})`);
       else if (key.startsWith("today")) lines.push(`📌 ${c.intern.firstName}: ${c.what} (due ${key})`);
       else lines.push(`🗓️ ${c.intern.firstName}: ${c.what} (due ${key})`);
     }
-    const notIn = team.interns.filter((i) => i.user && !i.user.lastLoginAt).map((i) => i.firstName);
+    const notIn = members.filter((i) => i.user && !i.user.lastLoginAt).map((i) => i.firstName);
     const parts = [
       lines.length ? `*${team.name}: today's commitments*\n${lines.join("\n")}` : "",
       notIn.length ? `*Not signed in yet:* ${notIn.join(", ")}. It takes 2 minutes: ${origin}` : "",

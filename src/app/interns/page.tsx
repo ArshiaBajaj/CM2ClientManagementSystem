@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { Guide } from "@/components/guide";
 import { Notice, Shell } from "@/components/shell";
-import { accessOverview, mergeDuplicateTeams } from "@/lib/gate";
+import { accessOverview, mergeDuplicateTeams, teamIdsOf } from "@/lib/gate";
 import { fieldsToSpec, parseFields } from "@/lib/forms";
 import { prisma } from "@/lib/db";
 
@@ -21,7 +21,7 @@ export default async function InternsAdminPage({
   const [{ coaches, interns }, packets, teams] = await Promise.all([
     accessOverview(),
     prisma.accessPacket.findMany({ orderBy: [{ audience: "asc" }, { sortOrder: "asc" }] }),
-    prisma.internTeam.findMany({ include: { interns: true }, orderBy: { name: "asc" } }),
+    prisma.internTeam.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   // Who has actually signed in, and who turned on phone notifications.
@@ -154,21 +154,26 @@ export default async function InternsAdminPage({
                   {reach.get(intern.id)?.phone ? "🔔 Notifications on" : "Notifications off"}
                 </span>
                 {teams.length > 1 ? (
-                  <form action="/api/interns" method="post" className="flex items-center gap-1">
-                    <input type="hidden" name="intent" value="move-team" />
-                    <input type="hidden" name="internId" value={intern.id} />
-                    <label className="sr-only" htmlFor={`team-${intern.id}`}>
-                      Team for {intern.firstName}
-                    </label>
-                    <select id={`team-${intern.id}`} name="teamId" defaultValue={intern.team.id} className="rounded-full border border-ink/20 bg-white px-2 py-0.5">
+                  <details className="relative">
+                    <summary className="cursor-pointer rounded-full border border-ink/20 px-2.5 py-0.5 hover:border-ink/40">
+                      Teams: {teams.filter((t) => teamIdsOf(intern).includes(t.id)).map((t) => t.name).join(", ")}
+                    </summary>
+                    <form
+                      action="/api/interns"
+                      method="post"
+                      className="absolute right-0 z-10 mt-1 w-64 space-y-1 rounded-xl border border-ink/15 bg-white p-3 text-sm font-normal shadow-lg"
+                    >
+                      <input type="hidden" name="intent" value="set-teams" />
+                      <input type="hidden" name="internId" value={intern.id} />
                       {teams.map((t) => (
-                        <option key={t.id} value={t.id}>
+                        <label key={t.id} className="flex items-center gap-2">
+                          <input type="checkbox" name="teams" value={t.id} defaultChecked={teamIdsOf(intern).includes(t.id)} />
                           {t.name}
-                        </option>
+                        </label>
                       ))}
-                    </select>
-                    <button className="rounded-full border border-ink/20 px-2.5 py-0.5 hover:border-ink/40">Move</button>
-                  </form>
+                      <button className="btn mt-2 w-full py-1.5 text-sm">Save teams</button>
+                    </form>
+                  </details>
                 ) : null}
                 <span className={`rounded-full px-2.5 py-0.5 ${intern.internDone ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
                   Intern {intern.internDone ? "signed" : "pending"}
@@ -197,7 +202,8 @@ export default async function InternsAdminPage({
               <li key={team.id} className="rounded-xl border border-ink/10 bg-white px-4 py-3">
                 <p className="font-medium">{team.name}</p>
                 <p className="text-sm text-ink/50">
-                  {team.focus || "No focus yet"} · {team.interns.length} intern{team.interns.length === 1 ? "" : "s"}
+                  {team.focus || "No focus yet"} · {interns.filter((i) => teamIdsOf(i).includes(team.id)).length} intern
+                  {interns.filter((i) => teamIdsOf(i).includes(team.id)).length === 1 ? "" : "s"}
                   {team.chatWebhook ? " · 💬 Google Chat connected" : ""}
                 </p>
                 <form action="/api/interns" method="post" className="mt-2 flex flex-wrap items-end gap-2">

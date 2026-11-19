@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { Notice, Shell } from "@/components/shell";
-import { ensureProgramChannels, ensureTeamChannel, internClearance, internRecord } from "@/lib/gate";
+import { ensureProgramChannels, ensureTeamChannel, internClearance, internRecord, teamIdsOf } from "@/lib/gate";
 import { prisma } from "@/lib/db";
 import { LiveRefresh } from "@/components/live-refresh";
 
@@ -24,7 +24,11 @@ export default async function InternChatPage({
   }
 
   await ensureProgramChannels();
-  if (intern) await ensureTeamChannel(intern.teamId, intern.team.name);
+  if (intern) {
+    for (const team of await prisma.internTeam.findMany({ where: { id: { in: teamIdsOf(intern) } } })) {
+      await ensureTeamChannel(team.id, team.name);
+    }
+  }
 
   const { channel: channelKey, error, notice } = await searchParams;
   const channels = await prisma.internChannel.findMany({
@@ -33,7 +37,7 @@ export default async function InternChatPage({
       : {
           OR: [
             { kind: { in: ["all", "between"] } },
-            { kind: "team", teamId: intern?.teamId ?? "" },
+            { kind: "team", teamId: { in: intern ? teamIdsOf(intern) : [] } },
             { kind: "direct", memberIds: { contains: intern?.id ?? "__none__" } },
           ],
         },

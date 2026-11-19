@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { Guide } from "@/components/guide";
 import { Notice, Shell } from "@/components/shell";
-import { internClearance, internRecord, visibleTaskWhere } from "@/lib/gate";
+import { internClearance, internRecord, visibleTaskWhere, teamIdsOf } from "@/lib/gate";
 import { prisma } from "@/lib/db";
 
 const COLUMNS = [
@@ -36,7 +36,7 @@ export default async function InternTasksPage({
   const { error, notice, task: selectedId } = await searchParams;
   const [tasks, people, teams] = await Promise.all([
     prisma.internTask.findMany({
-      where: manager ? {} : visibleTaskWhere(intern!.teamId),
+      where: manager ? {} : visibleTaskWhere(teamIdsOf(intern!)),
       include: { team: true, assignee: true, notes: { orderBy: { createdAt: "asc" } } },
       orderBy: { updatedAt: "desc" },
     }),
@@ -78,7 +78,7 @@ export default async function InternTasksPage({
             </label>
             <label className="block text-sm font-medium">
               Who can see it
-              <select name="audience" className="field" defaultValue={manager ? "all" : "team"}>
+              <select name="audience" className="field" defaultValue={manager ? "all" : (intern?.teamId ?? "all")}>
                 {manager ? (
                   teams.map((team) => (
                     <option key={team.id} value={team.id}>
@@ -86,7 +86,13 @@ export default async function InternTasksPage({
                     </option>
                   ))
                 ) : (
-                  <option value="team">My team · {intern?.team.name}</option>
+                  teams
+                    .filter((team) => intern && teamIdsOf(intern).includes(team.id))
+                    .map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))
                 )}
                 <option value="all">All interns</option>
               </select>

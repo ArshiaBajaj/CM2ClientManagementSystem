@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { isLeadOrAdmin } from "@/lib/access";
 import { Notice, Shell } from "@/components/shell";
-import { internClearance, internRecord } from "@/lib/gate";
+import { internClearance, internRecord, onTeamWhere, teamIdsOf } from "@/lib/gate";
 import { prisma } from "@/lib/db";
 import { PROGRAM_TZ, dueLabel, isOverdue, localParts } from "@/lib/commitments";
 
@@ -158,11 +158,12 @@ export default async function CommitmentsPage({
 
   const { error, notice, team } = await searchParams;
   const teams = manager ? await prisma.internTeam.findMany({ orderBy: { name: "asc" } }) : [];
-  const teamFilter = manager ? (team ? { intern: { teamId: team } } : {}) : { intern: { teamId: me!.teamId } };
+  const myTeams = me ? teamIdsOf(me) : [];
+  const teamFilter = manager ? (team ? { teamId: team } : {}) : { teamId: { in: myTeams } };
   const since = new Date(Date.now() - 60 * 86_400_000);
   const rows = await load({ ...teamFilter, OR: [{ status: "open" }, { createdAt: { gte: since } }] });
   const interns = manager
-    ? await prisma.intern.findMany({ where: team ? { teamId: team } : {}, orderBy: { firstName: "asc" } })
+    ? await prisma.intern.findMany({ where: team ? onTeamWhere(team) : {}, orderBy: { firstName: "asc" } })
     : [];
   const now = new Date();
 
@@ -174,7 +175,7 @@ export default async function CommitmentsPage({
 
   return (
     <Shell user={user}>
-      <p className="label-caps text-accent">{manager ? "All teams" : me?.team.name}</p>
+      <p className="label-caps text-accent">{manager ? "All teams" : "Your teams"}</p>
       <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">Commitments</h1>
       <p className="mt-3 max-w-2xl text-ink/65">
         What everyone said they&apos;d do, and by when. Say it in team chat (&ldquo;I&apos;ll send the flyer by
@@ -248,7 +249,7 @@ export default async function CommitmentsPage({
           <h2 className="font-display text-2xl font-semibold tracking-tight text-signal">Overdue</h2>
           <ul className="mt-4 grid gap-3">
             {overdue.map((c) => (
-              <Card key={c.id} c={c} now={now} mine={false} canNudge={c.intern.teamId === me?.teamId} manager={manager} />
+              <Card key={c.id} c={c} now={now} mine={false} canNudge={myTeams.includes(c.teamId ?? "")} manager={manager} />
             ))}
           </ul>
         </section>
@@ -259,7 +260,7 @@ export default async function CommitmentsPage({
         {upcoming.length ? (
           <ul className="mt-4 grid gap-3">
             {upcoming.map((c) => (
-              <Card key={c.id} c={c} now={now} mine={false} canNudge={c.intern.teamId === me?.teamId} manager={manager} />
+              <Card key={c.id} c={c} now={now} mine={false} canNudge={myTeams.includes(c.teamId ?? "")} manager={manager} />
             ))}
           </ul>
         ) : (
