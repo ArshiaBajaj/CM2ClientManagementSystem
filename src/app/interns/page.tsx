@@ -24,6 +24,25 @@ export default async function InternsAdminPage({
     prisma.internTeam.findMany({ include: { interns: true }, orderBy: { name: "asc" } }),
   ]);
 
+  // Who has actually signed in, and who turned on phone notifications.
+  const internUsers = await prisma.user.findMany({
+    where: { internId: { in: interns.map((i) => i.id) } },
+    select: { id: true, internId: true, lastLoginAt: true },
+  });
+  const phones = await prisma.pushSubscription.groupBy({
+    by: ["userId"],
+    where: { userId: { in: internUsers.map((u) => u.id) } },
+    _count: true,
+  });
+  const withPhone = new Set(phones.map((p) => p.userId));
+  const reach = new Map(
+    internUsers.map((u) => [u.internId!, { lastLoginAt: u.lastLoginAt, phone: withPhone.has(u.id) }]),
+  );
+  const signedIn = interns.filter((i) => reach.get(i.id)?.lastLoginAt).length;
+  const phoneOn = interns.filter((i) => reach.get(i.id)?.phone).length;
+  const day = (d: Date) =>
+    new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(d);
+
   return (
     <Shell user={user}>
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -84,7 +103,12 @@ export default async function InternsAdminPage({
       <section className="mt-10">
         <h2 className="font-display text-2xl font-semibold tracking-tight">Interns</h2>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-ink/55">Green badges mean the forms are on file and the workspace is open.</p>
+          <p className="text-sm text-ink/55">
+            <span className="font-semibold text-ink">
+              {signedIn} of {interns.length} signed in · {phoneOn} with phone notifications on.
+            </span>{" "}
+            Green badges mean the forms are on file and the workspace is open.
+          </p>
           {interns.some((i) => !i.internDone || !i.parentDone) ? (
             <form action="/api/interns" method="post">
               <input type="hidden" name="intent" value="on-file" />
@@ -108,6 +132,18 @@ export default async function InternsAdminPage({
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
+                {reach.get(intern.id)?.lastLoginAt ? (
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-emerald-800">
+                    Signed in · {day(reach.get(intern.id)!.lastLoginAt!)}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-signal/10 px-2.5 py-0.5 text-signal">Not signed in yet</span>
+                )}
+                <span
+                  className={`rounded-full px-2.5 py-0.5 ${reach.get(intern.id)?.phone ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}
+                >
+                  {reach.get(intern.id)?.phone ? "🔔 Notifications on" : "Notifications off"}
+                </span>
                 {teams.length > 1 ? (
                   <form action="/api/interns" method="post" className="flex items-center gap-1">
                     <input type="hidden" name="intent" value="move-team" />
