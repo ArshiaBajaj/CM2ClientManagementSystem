@@ -1,3 +1,4 @@
+import { ReportConcern } from "@/components/report-concern";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession, type SessionUser } from "@/lib/auth";
@@ -81,6 +82,11 @@ export default async function WorkspacePage({
       ) : (
         <StaffHome user={user} />
       )}
+      {user.role === "guardian" || user.role === "client" ? (
+        <div className="mt-10 max-w-2xl">
+          <ReportConcern clientId={user.clientId} />
+        </div>
+      ) : null}
     </Shell>
   );
 }

@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Privacy" };
 const POINTS = [
   {
     title: "Coaching stays between a teen and their coach",
-    body: "Coaching notes, journal entries, goals, and chat are visible only to the teen, their coach, and the program leads who supervise coaching. Parents see logistics: sessions, credits, documents to sign, and short progress updates the coach chooses to share. The exception is an emergency.",
+    body: "Coaching notes, journal entries, goals, and chat are visible only to the teen, their coach, and the program leads who supervise coaching. Parents see logistics: sessions, credits, documents to sign, and short progress updates the coach chooses to share. To keep everyone safe, a program manager may review coach–teen chats, and every review is logged. The exception is an emergency: coaches and volunteers must report suspected abuse or neglect to Georgia DFCS. Teens and parents can use Report a concern on their home page to reach the program managers directly.",
   },
   {
     title: "What we collect",

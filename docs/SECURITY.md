@@ -33,3 +33,12 @@ The app now has the technical safeguards HIPAA expects (access control, audit lo
 - Remove `DEMO_LOGINS` from Production in Vercel (and delete the seeded demo users from the production database).
 - Set `CRON_SECRET` in Vercel so only Vercel's scheduler can run the daily reminders.
 - Have counsel review `/privacy`.
+
+
+## November 2026 additions
+- Sessions end everywhere when a password or role changes (session version on each account).
+- New passwords are checked against known data breaches (Have I Been Pwned range API; only a 5-character hash prefix leaves the server).
+- Two-step sign-in (authenticator app, TOTP) for anyone; managers are reminded until it's on. Secrets are encrypted (AES-256-GCM). Admins can reset it from Sign-in help.
+- The daily job runs at most once per 20 hours; set `CRON_SECRET` in Vercel so only Vercel can trigger it.
+- Safeguarding: managers can review CM2 coach–teen chats and every review is logged; families are told in the chat and privacy page. Teens and parents can *Report a concern*; managers are alerted and work it from Safety concerns.
+- Drafts for the director: `docs/INCIDENT_RESPONSE.md`, `docs/DATA_RETENTION.md`.

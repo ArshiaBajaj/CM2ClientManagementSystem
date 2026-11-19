@@ -30,7 +30,7 @@ export async function ensureProgramManagers() {
     } else if (existing.role !== "admin" || existing.internId || existing.clientId || existing.coachId) {
       await prisma.user.update({
         where: { id: existing.id },
-        data: { role: "admin", internId: null, clientId: null, coachId: null },
+        data: { role: "admin", internId: null, clientId: null, coachId: null, sessionVersion: { increment: 1 } },
       });
     }
   }

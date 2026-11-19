@@ -216,6 +216,11 @@ export default async function SettingsPage({
           <button name="intent" value="temp_password" className={mail ? "btn-secondary" : "btn"}>
             Create temporary password
           </button>
+          {user.role === "admin" ? (
+            <button name="intent" value="reset_two_step" className="btn-ghost">
+              Turn off their two-step sign-in
+            </button>
+          ) : null}
         </form>
         <p className="mt-3 text-xs text-ink/55">
           {mail

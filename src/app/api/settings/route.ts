@@ -63,6 +63,19 @@ export async function POST(request: NextRequest) {
     return back(request, "googlechat", ok ? "notice" : "error", ok ? "Test posted. Check the space." : "Google Chat didn't accept it. Check the link.");
   }
 
+  if (intent === "reset_two_step") {
+    if (user.role !== "admin") return back(request, "signin", "error", "Only an admin can turn off someone's two-step sign-in");
+    const email = String(form.get("email") ?? "").toLowerCase().trim();
+    const target = await prisma.user.findUnique({ where: { email } });
+    if (!target || !target.totpEnabledAt) return back(request, "signin", "error", "That person doesn't have two-step sign-in on");
+    await prisma.user.update({
+      where: { id: target.id },
+      data: { totpSecret: null, totpEnabledAt: null, totpLastStep: 0, sessionVersion: { increment: 1 } },
+    });
+    await audit("TwoStepReset", "User", target.id, user.id);
+    return back(request, "signin", "notice", `Two-step sign-in turned off for ${email}. They can set it up again.`);
+  }
+
   if (intent === "email_link") {
     const email = String(form.get("email") ?? "").toLowerCase().trim();
     const target = await prisma.user.findUnique({ where: { email } });
@@ -87,7 +100,7 @@ export async function POST(request: NextRequest) {
       return back(request, "signin", "error", "Only an admin can reset a manager's password");
     }
     const temp = temporaryPassword();
-    await prisma.user.update({ where: { id: target.id }, data: { password: hashPassword(temp), mustChangePassword: true } });
+    await prisma.user.update({ where: { id: target.id }, data: { password: hashPassword(temp), mustChangePassword: true, sessionVersion: { increment: 1 } } });
     await prisma.auditEvent.deleteMany({ where: { action: "LoginFailed", entityId: email } });
     await audit("TemporaryPasswordIssued", "User", target.id, user.id);
     await setFlash(`Shown once, share it privately. They pick their own at sign-in. Temporary password for ${email}:  ${temp}`);

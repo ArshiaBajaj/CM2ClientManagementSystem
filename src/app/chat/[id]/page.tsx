@@ -5,6 +5,8 @@ import { canAccessClient, isLeadOrAdmin, resolveCoachId } from "@/lib/access";
 import { guardClientWorkspace } from "@/lib/gate";
 import { prisma } from "@/lib/db";
 import { Shell } from "@/components/shell";
+import { ReportConcern } from "@/components/report-concern";
+import { audit } from "@/lib/security";
 
 export default async function ChatThreadPage({
   params,
@@ -45,6 +47,10 @@ export default async function ChatThreadPage({
   if (user.role === "client" && user.clientId !== conversation.clientId) redirect("/chat");
 
   const coach = await prisma.coachRoster.findUnique({ where: { coachId: conversation.coachId } });
+  // Safeguarding oversight: a manager reading a coach–teen chat is always logged.
+  if (isLeadOrAdmin(user)) {
+    await audit("ChatViewed", "Conversation", conversation.id, user.id, { clientId: conversation.clientId });
+  }
   const client = conversation.client;
   const meetingUrl =
     client.assignments[0]
@@ -77,6 +83,10 @@ export default async function ChatThreadPage({
             </form>
           </div>
           {error ? <p className="px-5 pt-3 text-sm text-clay">{error}</p> : null}
+          <p className="border-b border-ink/10 bg-paper/60 px-5 py-2 text-xs text-ink/60">
+            🔒 Private between {user.role === "client" ? "you and your coach" : "the student and their coach"}. To keep
+            everyone safe, a Coach Me 2 program manager may review chats. Parents can&apos;t see them.
+          </p>
           <div className="max-h-[28rem] space-y-3 overflow-y-auto px-5 py-4">
             {conversation.messages.map((message) => {
               const mine =
@@ -114,7 +124,9 @@ export default async function ChatThreadPage({
           )}
         </section>
 
-        <aside className="rounded-2xl border border-ink/10 bg-white p-5">
+        <aside className="space-y-4">
+          {user.role === "client" ? <ReportConcern clientId={user.clientId} compact /> : null}
+          <div className="rounded-2xl border border-ink/10 bg-white p-5">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#1a3350] text-lg font-semibold text-paper">
             {client.firstName[0]}
             {client.lastName[0]}
@@ -154,6 +166,7 @@ export default async function ChatThreadPage({
               Parents do not see this confidential chat thread.
             </p>
           </div>
+        </div>
         </aside>
       </div>
     </Shell>

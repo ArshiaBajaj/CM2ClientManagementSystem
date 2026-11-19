@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prisma } from "@/lib/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/brand";
@@ -28,6 +29,7 @@ const STAFF_LINKS: NavItem[] = [
 
 const MANAGER_LINKS: NavItem[] = [
   { href: "/matching", label: "Matching" },
+  { href: "/concerns", label: "Safety concerns" },
   { href: "/clients/new", label: "Enroll" },
   { href: "/credits", label: "Credits" },
   { href: "/documents", label: "Documents" },
@@ -176,6 +178,12 @@ export async function Shell({
     { href: settings.researchUrl, label: "Research" },
   ].filter((link) => link.href);
 
+  // Managers see every family's information, so nudge them until two-step sign-in is on.
+  const needsTwoStep =
+    user && (user.role === "admin" || user.role === "team_lead")
+      ? !(await prisma.user.findUnique({ where: { id: user.id }, select: { totpEnabledAt: true } }))?.totpEnabledAt
+      : false;
+
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[232px_1fr]">
       <aside className="bg-[#1a3350] text-paper lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
@@ -228,6 +236,7 @@ export async function Shell({
           {user ? (
             <div className={`flex gap-1 border-white/10 lg:flex-col lg:border-t lg:pt-3 ${programLinks.length ? "lg:mt-3" : "lg:mt-auto"}`}>
               <NavLink href="/account/devices">Phone &amp; Apple Watch</NavLink>
+              <NavLink href="/account/security">Two-step sign-in</NavLink>
               <a
                 href={`/guides/CM2-Setup-Guide-${
                   user.role === "admin" || user.role === "team_lead"
@@ -255,6 +264,14 @@ export async function Shell({
         </nav>
       </aside>
       <main id="main" className="page-enter mx-auto w-full max-w-6xl px-6 py-10">
+        {needsTwoStep ? (
+          <p className="mb-6 rounded-xl border border-signal/30 bg-signal/[0.06] px-4 py-3 text-sm">
+            <span className="font-semibold">🔒 Protect family information:</span> managers should turn on two-step sign-in.{" "}
+            <Link href="/account/security" className="font-semibold underline">
+              Set it up (1 minute)
+            </Link>
+          </p>
+        ) : null}
         {user ? <AlertsBanner /> : null}
         {flash ? (
           <p role="status" className="mb-6 rounded-lg border border-leaf/30 bg-leaf-soft px-4 py-3 text-sm text-ink">

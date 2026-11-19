@@ -1,3 +1,4 @@
+import { BREACHED_MESSAGE, passwordWasBreached } from "@/lib/password-check";
 import { NextRequest, NextResponse } from "next/server";
 import { createSession, getSession } from "@/lib/auth";
 import { homeFor } from "@/lib/gate";
@@ -30,10 +31,12 @@ export async function POST(request: NextRequest) {
   if (next.length < 8) return back(request, "New password must be at least 8 characters");
   if (next !== confirm) return back(request, "New passwords don't match");
   if (verifyPassword(next, user.password)) return back(request, "Choose a password different from the temporary one");
+  if (await passwordWasBreached(next)) return back(request, BREACHED_MESSAGE);
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { password: hashPassword(next), mustChangePassword: false },
+    // Bumping the session version signs this account out on every other device.
+    data: { password: hashPassword(next), mustChangePassword: false, sessionVersion: { increment: 1 } },
   });
 
   const nextSession = { ...session, mustChangePassword: false };

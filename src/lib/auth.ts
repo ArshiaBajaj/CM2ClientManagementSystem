@@ -1,5 +1,7 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
+import { prisma } from "@/lib/db";
 
 export const COOKIE_NAME = "cm2_client_session";
 
@@ -25,7 +27,9 @@ function secret() {
 }
 
 export async function createSession(user: SessionUser) {
-  const token = await new SignJWT(user)
+  // Stamp the account's current session version; bumping it later signs out this session everywhere.
+  const record = await prisma.user.findUnique({ where: { id: user.id }, select: { sessionVersion: true } });
+  const token = await new SignJWT({ ...user, sv: record?.sessionVersion ?? 0 })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("8h")
@@ -46,15 +50,38 @@ export async function clearSession() {
   jar.delete(COOKIE_NAME);
 }
 
-export async function getSession(): Promise<SessionUser | null> {
+/**
+ * The signed-in person, or null. Also checks the account still exists and hasn't been signed out everywhere
+ * (password or role changed), and always uses the account's current role and links.
+ */
+export const getSession = cache(async (): Promise<SessionUser | null> => {
   const jar = await cookies();
   const token = jar.get(COOKIE_NAME)?.value;
   if (!token) return null;
 
+  let payload: SessionUser & { sv?: number };
   try {
-    const { payload } = await jwtVerify(token, secret());
-    return payload as SessionUser;
+    payload = (await jwtVerify(token, secret())).payload as SessionUser & { sv?: number };
   } catch {
     return null;
   }
+  const account = await prisma.user.findUnique({
+    where: { id: payload.id },
+    select: { sessionVersion: true, role: true, email: true, name: true, coachId: true, clientId: true, internId: true },
+  });
+  if (!account || account.sessionVersion !== (payload.sv ?? 0)) return null;
+  return {
+    ...payload,
+    role: account.role as SessionUser["role"],
+    email: account.email,
+    name: account.name,
+    coachId: account.coachId,
+    clientId: account.clientId,
+    internId: account.internId,
+  };
+});
+
+/** Signs this person out on every device (call after a password or role change). */
+export async function endOtherSessions(userId: string) {
+  await prisma.user.update({ where: { id: userId }, data: { sessionVersion: { increment: 1 } } });
 }

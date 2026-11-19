@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { audit } from "@/lib/security";
 import { alertUsers, postToGoogleChat } from "@/lib/alerts";
 import { dueLabel, isOverdue, localParts } from "@/lib/commitments";
 import { internsNotSignedIn, promptPhoneNotifications, remindNotSignedIn } from "@/lib/follow-ups";
@@ -25,6 +26,13 @@ export async function GET(request: NextRequest) {
     ? request.headers.get("authorization") === `Bearer ${secret}`
     : (request.headers.get("user-agent") ?? "").includes("vercel-cron");
   if (!authorized) return NextResponse.json({ error: "Not allowed" }, { status: 401 });
+
+  // Runs at most once every 20 hours, so calling it again (or a forged call) can't spam anyone.
+  const recent = await prisma.auditEvent.findFirst({
+    where: { action: "CronDailyRan", createdAt: { gt: new Date(Date.now() - 20 * 3_600_000) } },
+  });
+  if (recent) return NextResponse.json({ ok: true, skipped: "already ran today" });
+  await audit("CronDailyRan", "Program", "daily", null);
 
   const now = new Date();
   const until = new Date(now.getTime() + 16 * 60 * 60 * 1000);

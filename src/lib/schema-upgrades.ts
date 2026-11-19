@@ -64,6 +64,25 @@ const STATEMENTS = [
   `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "pushPromptAt" TIMESTAMP(3)`,
   `ALTER TABLE "InternTeam" ADD COLUMN IF NOT EXISTS "chatWebhook" TEXT NOT NULL DEFAULT ''`,
   `ALTER TABLE "Intern" ADD COLUMN IF NOT EXISTS "extraTeamIds" TEXT NOT NULL DEFAULT ''`,
+  // Security: session revocation, two-step sign-in, safety concerns
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "sessionVersion" INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "totpSecret" TEXT`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "totpEnabledAt" TIMESTAMP(3)`,
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "totpLastStep" INTEGER NOT NULL DEFAULT 0`,
+  `CREATE TABLE IF NOT EXISTS "SafetyConcern" (
+    "id" TEXT NOT NULL,
+    "reporterId" TEXT NOT NULL,
+    "reporterName" TEXT NOT NULL,
+    "reporterRole" TEXT NOT NULL,
+    "clientId" TEXT,
+    "body" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resolvedAt" TIMESTAMP(3),
+    "resolvedById" TEXT,
+    "note" TEXT NOT NULL DEFAULT '',
+    CONSTRAINT "SafetyConcern_pkey" PRIMARY KEY ("id")
+  )`,
+  `CREATE INDEX IF NOT EXISTS "SafetyConcern_resolvedAt_createdAt_idx" ON "SafetyConcern"("resolvedAt", "createdAt")`,
   // World View
   `ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "country" TEXT`,
   `ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "worldOptIn" BOOLEAN NOT NULL DEFAULT false`,

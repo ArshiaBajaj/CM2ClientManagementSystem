@@ -4,6 +4,7 @@ import { hashInvite } from "@/lib/invite";
 import { hashPassword } from "@/lib/password";
 import { audit } from "@/lib/security";
 import { finishSignIn } from "@/lib/sign-in";
+import { BREACHED_MESSAGE, passwordWasBreached } from "@/lib/password-check";
 
 /** Sets a password from a welcome-email link (one use), then signs the person in. */
 export async function POST(request: NextRequest) {
@@ -23,10 +24,17 @@ export async function POST(request: NextRequest) {
   }
   if (next.length < 8) return back("Use at least 8 characters");
   if (next !== confirm) return back("The two passwords don't match");
+  if (await passwordWasBreached(next)) return back(BREACHED_MESSAGE);
 
   const updated = await prisma.user.update({
     where: { id: user.id },
-    data: { password: hashPassword(next), mustChangePassword: false, inviteTokenHash: null, inviteExpiresAt: null },
+    data: {
+      password: hashPassword(next),
+      mustChangePassword: false,
+      inviteTokenHash: null,
+      inviteExpiresAt: null,
+      sessionVersion: { increment: 1 },
+    },
   });
   await audit("WelcomeLinkUsed", "User", user.id, user.id);
   return finishSignIn(request, updated, "password");

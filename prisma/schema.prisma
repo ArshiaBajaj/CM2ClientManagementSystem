@@ -31,6 +31,12 @@ model User {
   inviteReminderAt DateTime?
   /// When we emailed a signed-in person who hasn't turned on phone notifications.
   pushPromptAt DateTime?
+  /// Bumped when a password or role changes; older sessions stop working.
+  sessionVersion Int @default(0)
+  /// Two-step sign-in (authenticator app). The secret is stored encrypted.
+  totpSecret String?
+  totpEnabledAt DateTime?
+  totpLastStep Int @default(0)
   lastLoginAt DateTime?
   createdAt DateTime @default(now())
 }
@@ -737,4 +743,20 @@ model AuditEvent {
   entityId  String
   metadata  String
   createdAt DateTime @default(now())
+}
+
+/// A safety concern raised by a teen or parent. Program managers are alerted and follow up.
+model SafetyConcern {
+  id           String    @id @default(cuid())
+  reporterId   String
+  reporterName String
+  reporterRole String
+  clientId     String?
+  body         String
+  createdAt    DateTime  @default(now())
+  resolvedAt   DateTime?
+  resolvedById String?
+  note         String    @default("")
+
+  @@index([resolvedAt, createdAt])
 }
